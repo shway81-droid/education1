@@ -1,0 +1,530 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>말로 만드는 모임 정산 계산기</title>
+<meta name="description" content="Claude에게 말로 부탁해서 모임 정산 계산기를 만들고, 영수증으로 검산하고, 말로 고쳐 가는 과정을 집에서 따라 하는 안내입니다.">
+<meta property="og:title" content="말로 만드는 모임 정산 계산기">
+<meta property="og:description" content="코딩 없이 말로 부탁해서 정산 계산기를 만들고 고쳐 보기">
+<meta property="og:image" content="img/app-phone.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: 한 줄 기둥(본문 46rem) 안내지. 단계마다 '부탁 문장(노란 메모) → 확인할 것 → 고치기'. */
+:root {
+  --paper:#f5f6f2; --surface:#fff; --ink:#1c2622; --muted:#5b6863; --line:#dbe1dd;
+  --accent:#1d6b58; --accent-ink:#fff; --accent-soft:#e2eee8;
+  --memo:#fff4c7; --memo-line:#ecd98a; --memo-ink:#3d3200;
+  --ask:#eef1f8; --ask-ink:#26324d; --good:#1f7a3d; --bad:#b2402a;
+  --font-display:"Gowun Batang","Nanum Myeongjo",serif;
+  --font-body:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,"Consolas",monospace;
+  --radius:10px; color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#111715; --surface:#18201d; --ink:#e6ece9; --muted:#9eb0a9; --line:#2a3531;
+    --accent:#72cdb1; --accent-ink:#0d1613; --accent-soft:#1b2f28;
+    --memo:#2b2713; --memo-line:#5a4f20; --memo-ink:#f2e3a3;
+    --ask:#1b2232; --ask-ink:#c9d4f0; --good:#7fd59a; --bad:#f08d77; color-scheme:dark;
+  }
+}
+* { box-sizing:border-box; }
+html { -webkit-text-size-adjust:100%; scroll-padding-top:4.5rem; }
+body { margin:0; background:var(--paper); color:var(--ink); font-family:var(--font-body); font-size:1.0625rem; line-height:1.75; word-break:keep-all; overflow-wrap:break-word; }
+img { max-width:100%; height:auto; display:block; }
+a { color:var(--accent); text-underline-offset:.18em; }
+:focus-visible { outline:3px solid var(--accent); outline-offset:2px; border-radius:4px; }
+h1,h2,h3 { font-family:var(--font-display); font-weight:700; line-height:1.3; text-wrap:balance; margin:0; }
+p { margin:0; }
+.wrap { max-width:46rem; margin:0 auto; padding-inline:1.1rem; }
+
+.hero { padding-block:3rem 2rem; }
+.eyebrow { font-family:var(--font-mono); font-size:.78rem; letter-spacing:.08em; color:var(--accent); text-transform:uppercase; }
+.hero h1 { font-size:clamp(1.9rem,6vw,2.75rem); margin-top:.6rem; }
+.hero .lead { margin-top:1rem; color:var(--muted); max-width:38rem; }
+.hero-grid { display:grid; grid-template-columns:minmax(0,1fr) 15rem; gap:1.6rem; align-items:start; margin-top:2rem; }
+.hero-grid ul { margin:0; padding-left:1.1rem; display:grid; gap:.4rem; }
+@media (max-width:640px){ .hero-grid { grid-template-columns:1fr; } }
+
+.lesson-nav { position:sticky; top:env(safe-area-inset-top,0px); z-index:5; background:color-mix(in srgb,var(--paper) 92%,transparent); backdrop-filter:blur(8px); border-bottom:1px solid var(--line); }
+.lesson-nav .wrap { display:flex; gap:.4rem; padding-block:.55rem; overflow-x:auto; }
+.lesson-nav a { flex:none; text-decoration:none; color:var(--muted); font-size:.9rem; font-weight:600; padding:.35rem .8rem; border-radius:999px; border:1px solid var(--line); background:var(--surface); }
+.lesson-nav a[aria-current="true"] { background:var(--accent); color:var(--accent-ink); border-color:var(--accent); }
+
+section.block { padding-block:2.6rem; border-bottom:1px solid var(--line); }
+section.block:last-of-type { border-bottom:0; }
+.block-head { display:grid; gap:.5rem; margin-bottom:1.6rem; }
+.block-head h2 { font-size:clamp(1.55rem,5vw,2.05rem); }
+.block-head .summary { color:var(--muted); }
+h3 { font-size:1.22rem; margin-top:2.2rem; margin-bottom:.8rem; }
+.note { font-size:.92rem; color:var(--muted); }
+
+figure { margin:0; }
+figure.shot { background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:.6rem; }
+figure.shot img { border-radius:6px; margin-inline:auto; }
+figure.shot.phone img { max-height:34rem; width:auto; }
+figcaption { font-size:.9rem; color:var(--muted); margin-top:.6rem; line-height:1.6; }
+
+.kit { list-style:none; padding:0; margin:0; display:grid; gap:.45rem; }
+.kit li { display:flex; gap:.6rem; align-items:baseline; }
+.kit li::before { content:"□"; color:var(--accent); font-weight:700; flex:none; }
+
+.loop { list-style:none; padding:0; margin:1rem 0 0; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.6rem; counter-reset:loop; }
+.loop li { counter-increment:loop; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:.8rem; font-size:.95rem; line-height:1.5; }
+.loop li::before { content:counter(loop); display:block; font-family:var(--font-display); font-size:1.6rem; color:var(--accent); line-height:1; margin-bottom:.4rem; }
+.loop b { display:block; }
+@media (max-width:640px){ .loop { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+
+ol.steps { list-style:none; padding:0; margin:0; counter-reset:step; display:grid; gap:1.4rem; }
+ol.steps > li { counter-increment:step; display:grid; grid-template-columns:2.3rem minmax(0,1fr); gap:.8rem; }
+ol.steps > li::before { content:counter(step); width:2.3rem; height:2.3rem; border-radius:50%; display:grid; place-items:center; background:var(--accent); color:var(--accent-ink); font-weight:700; font-family:var(--font-display); font-size:1.1rem; }
+.step-body { display:grid; gap:.75rem; min-width:0; }
+.step-body > p:first-child { font-weight:600; }
+
+.prompt { background:var(--memo); border:1px solid var(--memo-line); border-radius:var(--radius); color:var(--memo-ink); overflow:hidden; }
+.prompt-top { display:flex; justify-content:space-between; align-items:center; gap:.6rem; padding:.45rem .6rem .45rem .9rem; border-bottom:1px dashed var(--memo-line); }
+.prompt-label { font-family:var(--font-mono); font-size:.75rem; letter-spacing:.05em; }
+.prompt pre { margin:0; padding:.85rem .95rem 1rem; white-space:pre-wrap; word-break:keep-all; overflow-wrap:anywhere; font-family:var(--font-body); font-size:.98rem; line-height:1.7; }
+.copy { font:inherit; font-size:.82rem; font-weight:600; cursor:pointer; border:1px solid var(--memo-ink); background:transparent; color:var(--memo-ink); border-radius:999px; padding:.2rem .75rem; min-height:2rem; }
+.copy:hover,.copy.done { background:var(--memo-ink); color:var(--memo); }
+
+.sample { background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; }
+.sample .prompt-top { border-bottom:1px dashed var(--line); color:var(--muted); }
+.sample pre { margin:0; padding:.85rem .95rem 1rem; white-space:pre-wrap; font-family:var(--font-body); font-size:.95rem; line-height:1.7; }
+
+.ask { background:var(--ask); color:var(--ask-ink); border-radius:var(--radius); padding:.9rem 1rem; display:grid; gap:.5rem; }
+.ask .who { font-family:var(--font-mono); font-size:.75rem; letter-spacing:.05em; }
+.ask ul { margin:0; padding-left:1.1rem; display:grid; gap:.3rem; }
+
+.answer { background:var(--accent-soft); border-radius:var(--radius); padding:.9rem 1rem; display:grid; gap:.3rem; }
+.answer b.big { font-family:var(--font-display); font-size:1.3rem; }
+.answer .row { display:flex; justify-content:space-between; gap:1rem; font-variant-numeric:tabular-nums; }
+
+table.t { width:100%; border-collapse:collapse; font-size:.95rem; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; }
+table.t th,table.t td { padding:.5rem .7rem; text-align:left; border-bottom:1px solid var(--line); }
+table.t th { background:var(--accent-soft); font-size:.85rem; }
+table.t tr:last-child td { border-bottom:0; }
+
+.check { list-style:none; padding:0; margin:0; display:grid; gap:.5rem; }
+.check label { display:flex; gap:.7rem; align-items:flex-start; cursor:pointer; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:.65rem .8rem; }
+.check input { width:1.2rem; height:1.2rem; margin-top:.3rem; accent-color:var(--accent); flex:none; }
+.check input:checked + span { color:var(--muted); text-decoration:line-through; }
+.check-count { font-size:.9rem; color:var(--muted); margin-top:.5rem; }
+
+.dodont { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.8rem; }
+.dodont > div { background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:.9rem 1rem; }
+.dodont h4 { margin:0 0 .4rem; font-size:.95rem; }
+.dodont .dont h4 { color:var(--bad); } .dodont .do h4 { color:var(--good); }
+.dodont ul { margin:0; padding-left:1.1rem; display:grid; gap:.3rem; font-size:.95rem; }
+@media (max-width:640px){ .dodont { grid-template-columns:1fr; } }
+
+.faq { display:grid; gap:.5rem; }
+.faq details { background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:.7rem .9rem; }
+.faq summary { cursor:pointer; font-weight:600; }
+.faq details p { margin-top:.5rem; color:var(--muted); }
+
+.downloads { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.6rem; }
+.dl { display:flex; flex-direction:column; gap:.15rem; text-decoration:none; border:1px solid var(--accent); border-radius:var(--radius); padding:.75rem .9rem; color:var(--ink); background:var(--surface); }
+.dl.main { background:var(--accent); color:var(--accent-ink); }
+.dl b { font-size:1rem; } .dl span { font-size:.85rem; opacity:.85; }
+.dl:hover { box-shadow:0 0 0 2px var(--accent); }
+@media (max-width:560px){ .downloads { grid-template-columns:1fr; } }
+
+footer { padding-block:2.5rem 3.5rem; color:var(--muted); font-size:.9rem; }
+@media (prefers-reduced-motion:no-preference){ html { scroll-behavior:smooth; } }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <p class="eyebrow">Claude로 시작하는 바이브 코딩 · 1일차 1교시</p>
+    <h1>말로 부탁해서 모임 정산 계산기를 만들어 봐요</h1>
+    <p class="lead">코드를 한 줄도 쓰지 않습니다. Claude에게 문장으로 부탁하고, 나온 화면을 눌러 보고, 마음에 안 드는 곳을 말로 고치면 됩니다. 노란 메모의 부탁 문장은 <b>복사</b>를 눌러 Claude 채팅창에 그대로 붙여 넣으세요.</p>
+    <div class="hero-grid">
+      <figure class="shot phone">
+        <img src="img/app-phone.jpg" alt="완성된 정산 계산기를 휴대폰 너비로 본 화면. 총무 계좌번호, 참석자, 지출 항목, 정산 결과와 송금 목록이 위에서 아래로 이어진다" width="390" height="2279" loading="eager" style="max-height:30rem">
+        <figcaption>이 안내를 끝내면 만들게 되는 계산기입니다. <a href="examples/settle.html" target="_blank" rel="noopener">완성 예시 직접 눌러 보기</a></figcaption>
+      </figure>
+      <div>
+        <p style="font-weight:600">이 계산기로 할 수 있는 것</p>
+        <ul>
+          <li>참석자와 지출을 넣으면 총액과 한 사람 부담액이 나옵니다.</li>
+          <li>누가 누구에게 얼마를 보내면 끝나는지, 보내는 횟수를 가장 적게 보여 줍니다.</li>
+          <li>술값처럼 일부만 나눌 항목은 마신 사람만 골라 나눕니다.</li>
+          <li>결과를 단톡방에 붙여 넣을 문장으로 복사합니다.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</header>
+
+<nav class="lesson-nav" aria-label="단계 이동">
+  <div class="wrap">
+    <a href="#start">시작 전에</a>
+    <a href="#make">1 만들기</a>
+    <a href="#verify">2 검산</a>
+    <a href="#fix">3 고치기</a>
+    <a href="#save">4 모아 두기</a>
+    <a href="#help">막힐 때</a>
+  </div>
+</nav>
+
+<main>
+<!-- ============================== 시작 전에 ============================== -->
+<section class="block" id="start">
+  <div class="wrap">
+    <div class="block-head">
+      <p class="eyebrow">시작 전에 한 번만</p>
+      <h2>준비할 것 세 가지</h2>
+    </div>
+    <ul class="kit">
+      <li><span><b>Claude 유료 계정</b>으로 claude.ai에 로그인해 주세요. 수업에서는 계정이 제공됩니다.</span></li>
+      <li><span><b>설정 → 기능(Capabilities)</b>에서 '코드 실행 및 파일 생성'과 '아티팩트' 관련 항목이 켜져 있는지 확인해 주세요. 계산기가 채팅창 옆 창에 뜨려면 필요합니다. 메뉴 이름은 화면에 따라 조금 다를 수 있습니다.</span></li>
+      <li><span><b>메모장</b>을 열어 두세요. 잘 된 부탁 문장을 모아 두면 2일차에 그대로 다시 씁니다.</span></li>
+    </ul>
+
+    <h3>실습 영수증 받기</h3>
+    <div class="downloads"><a class="dl main" href="files/practice-receipts.zip" download="실습영수증.zip"><b>실습 영수증 6장 받기</b><span>압축 파일 · 1.8MB · 경주 가족여행(가상 자료)</span></a></div>
+    <p class="note" style="margin-top:.6rem">압축을 풀면 receipt1~6 사진이 나옵니다. 내 영수증으로 하실 때는 카드번호와 계좌번호가 보이지 않게 찍어 주세요.</p>
+
+    <h3>모든 단계를 이 순서로 합니다</h3>
+    <ol class="loop">
+      <li><b>기준을 말한다</b>무엇을 어떻게 해 달라는지 문장으로 적어요</li>
+      <li><b>설명을 읽고 허락한다</b>만들기 전에 Claude가 보여 주는 화면 설명을 읽어요</li>
+      <li><b>결과를 직접 검산한다</b>숫자는 내 손으로 한 번 더</li>
+      <li><b>말로 고친다</b>마음에 안 드는 곳을 그대로 말해요</li>
+    </ol>
+  </div>
+</section>
+
+<!-- ============================== 1 만들기 ============================== -->
+<section class="block" id="make">
+  <div class="wrap">
+    <div class="block-head">
+      <p class="eyebrow">1단계 · 약 15분 · 채팅창</p>
+      <h2>화면부터 설명 듣고 만들기</h2>
+      <p class="summary">처음 부탁에는 <b>"만들기 전에 화면이 어떻게 생길지 먼저 설명해 줘"</b>를 꼭 넣습니다. 설명이 마음에 안 들면 만들기 전에 고칠 수 있습니다.</p>
+    </div>
+
+    <ol class="steps">
+      <li><div class="step-body">
+        <p>claude.ai에서 새 채팅을 열고 아래 부탁 문장을 붙여 넣어 주세요.</p>
+        <div class="prompt">
+          <div class="prompt-top"><span class="prompt-label">부탁 문장 · 정산 계산기</span><button class="copy" type="button">복사</button></div>
+<pre>모임 정산 계산기를 만들어 줘.
+- 참석자 이름을 넣고, 각자 낸 돈을 항목별로 입력
+- 총액, 1인당 금액, 누가 누구에게 얼마 보내면 끝나는지 표시
+- 보내는 횟수는 가장 적게
+- 휴대폰에서도 보기 좋게 큰 글씨와 큰 버튼
+만들기 전에 화면이 어떻게 생길지 먼저 설명해 줘.</pre>
+        </div>
+        <p class="note">부탁 문장은 '무엇을 넣고', '무엇이 나와야 하고', '어디서 쓰는지'를 적는 것이 요령입니다.</p>
+      </div></li>
+      <li><div class="step-body">
+        <p>Claude가 보여 주는 화면 설명을 읽어 주세요.</p>
+        <div class="ask">
+          <p class="who">설명에서 이런 것을 찾아보세요</p>
+          <ul>
+            <li>참석자, 지출 항목, 결과가 어떤 순서로 나오는지</li>
+            <li>버튼과 글씨가 휴대폰에서 누르기 쉬운 크기인지</li>
+            <li>내가 부탁한 것 중 빠진 것은 없는지 (빠졌다면 "○○도 넣어 줘"라고 먼저 말해요)</li>
+          </ul>
+        </div>
+        <p class="note">Claude가 모호한 부분은 짐작한 내용을 함께 적어 줍니다. 틀린 가정이 있으면 이때 바로잡으세요.</p>
+      </div></li>
+      <li><div class="step-body">
+        <p>설명이 괜찮으면 허락해 주세요.</p>
+        <div class="prompt">
+          <div class="prompt-top"><span class="prompt-label">부탁 문장 · 허락하기</span><button class="copy" type="button">복사</button></div>
+<pre>좋아, 그대로 만들어 줘</pre>
+        </div>
+      </div></li>
+      <li><div class="step-body">
+        <p>채팅창 옆 창에 계산기가 뜨면 눌러 보세요.</p>
+        <p>이름을 넣고 추가 버튼을 눌러 보고, 금액을 넣어 총액이 바뀌는지 확인합니다. 이 옆 창의 앱을 <b>아티팩트</b>라고 부릅니다.</p>
+      </div></li>
+    </ol>
+  </div>
+</section>
+
+<!-- ============================== 2 검산 ============================== -->
+<section class="block" id="verify">
+  <div class="wrap">
+    <div class="block-head">
+      <p class="eyebrow">2단계 · 약 10분</p>
+      <h2>영수증으로 검산하기</h2>
+      <p class="summary">Claude가 만든 계산기도 틀릴 수 있습니다. 숫자는 내 손으로 한 번 맞춰 봐야 믿을 수 있습니다.</p>
+    </div>
+
+    <figure class="shot" style="max-width:15rem">
+      <img src="img/receipt-sample.jpg" alt="실습 영수증 receipt1. 한솔마을 한정식, 합계 68,000원, 카드번호 일부가 가려져 있다" width="390" height="522" loading="lazy">
+      <figcaption>실습 영수증 한 장(receipt1). 카드번호는 가려져 있습니다.</figcaption>
+    </figure>
+
+    <ol class="steps" style="margin-top:1.4rem">
+      <li><div class="step-body">
+        <p>참석자 네 명을 넣어 주세요.</p>
+        <p>이름은 <b>민수, 지영, 서준, 나</b>입니다.</p>
+      </div></li>
+      <li><div class="step-body">
+        <p>영수증 6장의 합계 금액을 항목으로 하나씩 넣어 주세요.</p>
+        <p>가게 이름과 영수증 맨 아래의 <b>합계</b> 금액을 읽어 넣습니다. 이 단계에서는 여섯 장 모두 한 사람이 냈고, 네 명이 똑같이 나누는 것으로 합니다.</p>
+        <p class="note">receipt1은 품목을 더하면 64,000원인데 찍힌 합계는 68,000원입니다. 합계 금액(68,000원)을 쓰세요. receipt6은 일부러 구겨지고 흐리게 만든 사진이라 숫자를 잘 보고 읽어야 합니다.</p>
+      </div></li>
+      <li><div class="step-body">
+        <p>결과가 아래와 같은지 확인해 주세요.</p>
+        <div class="answer">
+          <div class="row"><span>총액</span><b class="big">335,300원</b></div>
+          <div class="row"><span>1인당 금액 (4명)</span><b class="big">83,825원</b></div>
+        </div>
+        <p class="note">같으면 성공입니다. 다르면 금액을 하나씩 영수증과 대조해 보세요. 어느 줄이 틀렸는지는 Claude에게 "영수증 금액 6개 합이 335,300원이 되도록 계산을 다시 점검해 줘"라고 부탁해도 됩니다.</p>
+      </div></li>
+    </ol>
+  </div>
+</section>
+
+<!-- ============================== 3 고치기 ============================== -->
+<section class="block" id="fix">
+  <div class="wrap">
+    <div class="block-head">
+      <p class="eyebrow">3단계 · 약 25분</p>
+      <h2>말로 하나씩 고치기</h2>
+      <p class="summary">고칠 점을 한 번에 하나씩, 구체적으로 말합니다. 고친 뒤에는 2단계와 같은 금액으로 다시 검산하세요.</p>
+    </div>
+
+    <div class="ask" style="margin-bottom:1.6rem">
+      <p class="who">고치기 전에 이것만</p>
+      <ul>
+        <li>고치기 전에 아티팩트 제목 메뉴에서 <b>복제(Duplicate)</b>해 두세요. 망가져도 원본이 남습니다.</li>
+        <li>고친 것이 마음에 안 들면 "방금 고친 것을 취소하고 이전 상태로 되돌려 줘"라고 말하세요.</li>
+        <li>"좀 더 좋게 해 줘"처럼 막연하게 말하지 말고, 어디를 어떻게 바꿀지 적어 주세요.</li>
+      </ul>
+    </div>
+
+    <h3>고치기 ① 영수증 사진으로 입력하기</h3>
+    <ol class="steps">
+      <li><div class="step-body">
+        <p>항목을 일일이 치지 않아도 영수증 사진을 올리면 입력되게 해 보세요.</p>
+        <div class="prompt">
+          <div class="prompt-top"><span class="prompt-label">고치는 말 · 영수증 추가</span><button class="copy" type="button">복사</button></div>
+<pre>지출 항목을 일일이 입력하지 않아도, 영수증 사진만 올리면 항목 이름과 금액이 입력 칸에 채워지게 해 줘.
+읽은 값은 바로 추가하지 말고, 내가 확인하고 고친 다음에 추가 버튼을 누르게 해 줘.
+금액을 못 읽으면 못 읽었다고 알려 줘.</pre>
+        </div>
+        <p>실습 영수증 사진을 올려서 가게 이름과 합계가 채워지는지 보세요. <b>채워진 숫자는 꼭 영수증과 맞춰 본 뒤</b> 추가하세요.</p>
+        <p class="note">만들어 둔 완성 예시로 실습 영수증 6장을 읽혀 본 결과, 합계 금액은 여섯 장 모두 맞게 읽혔습니다(합 335,300원). 가게 이름은 세 장이 엉뚱한 글자로 읽혔으니 보이는 대로 고쳐 쓰세요. 만드는 Claude와 환경에 따라 결과는 다를 수 있습니다.</p>
+        <details class="faq"><summary>앱 안에서 사진이 안 읽히면</summary>
+          <p>사진 인식은 Claude 화면과 인터넷 환경에 따라 동작하지 않을 수 있습니다. 그럴 때는 영수증 사진을 <b>채팅창에 직접 올리고</b> 아래처럼 부탁해 보세요. Claude가 사진을 읽어 계산기에 미리 넣어 줍니다.</p>
+          <div class="prompt" style="margin-top:.6rem">
+            <div class="prompt-top"><span class="prompt-label">고치는 말 · 사진을 채팅에 올릴 때</span><button class="copy" type="button">복사</button></div>
+<pre>올린 영수증 6장을 한 장씩 읽어서 가게 이름과 합계 금액을 지출 항목으로 계산기에 미리 넣어 줘.
+읽기 어려운 글자나 숫자는 추측하지 말고 '확인 필요'라고 알려 줘.</pre>
+          </div>
+        </details>
+      </div></li>
+    </ol>
+
+    <h3>고치기 ② 단톡방에 붙여 넣을 문장 복사</h3>
+    <ol class="steps">
+      <li><div class="step-body">
+        <p>결과를 문장으로 복사하는 버튼을 만들어 달라고 해요.</p>
+        <div class="prompt">
+          <div class="prompt-top"><span class="prompt-label">고치는 말 · 복사 버튼</span><button class="copy" type="button">복사</button></div>
+<pre>정산 결과를 단톡방에 붙여 넣기 좋게 문장으로 복사하는 버튼을 만들어 줘.
+총액, 지출 내역, 누가 누구에게 얼마 보내는지가 들어가게 해 줘.</pre>
+        </div>
+        <p>버튼을 누른 뒤 메모장에 붙여 넣어서 문장이 잘 나오는지 확인하세요. 아래처럼 나오면 잘 된 것입니다.</p>
+        <div class="sample">
+          <div class="prompt-top"><span class="prompt-label">나오는 문장 예시 (복사하지 마세요)</span></div>
+<pre>🧾 정산 결과
+총액 335,300원 (4명)
+
+[지출 내역]
+- 한솔마을 한정식 68,000원 (전원)
+- 행복셀프주유소 55,000원 (전원)
+...
+
+💸 송금 안내 (총 3번)
+나 → 민수 83,825원
+서준 → 민수 83,825원
+지영 → 민수 83,825원</pre>
+        </div>
+      </div></li>
+    </ol>
+
+    <h3>고치기 ③ 마신 사람끼리만 나누기</h3>
+    <ol class="steps">
+      <li><div class="step-body">
+        <p>술값이나 밥값을 먹은 사람끼리만 나누도록 고쳐 보세요.</p>
+        <div class="prompt">
+          <div class="prompt-top"><span class="prompt-label">고치는 말 · 나눌 사람 고르기</span><button class="copy" type="button">복사</button></div>
+<pre>지출 항목마다 나눌 사람을 고를 수 있게 해 줘.
+기본은 전원이고, 술값이나 밥값은 마신 사람끼리만 계산되게 해 줘.
+항목 목록에도 누가 나누는지 보이게 해 줘.</pre>
+        </div>
+        <p><b>검산:</b> 영수증 한 장(예: 카페 보문호수 23,500원)을 세 명만 고르고 다시 계산해 보세요. 그 항목은 세 명이 나눈 금액으로 바뀌고, 고르지 않은 사람의 금액은 그만큼 줄어야 합니다. 나누어떨어지지 않는 1원 단위는 한 사람이 더 부담해서 총합이 항상 맞아야 합니다.</p>
+      </div></li>
+    </ol>
+
+    <h3>고치기 ④ 총무가 모두 낸 것으로 계산하기</h3>
+    <ol class="steps">
+      <li><div class="step-body">
+        <p>항목마다 낸 사람을 고르는 대신, 총무 한 명이 모두 결제한 것으로 바꿔 보세요.</p>
+        <div class="prompt">
+          <div class="prompt-top"><span class="prompt-label">고치는 말 · 총무 지정</span><button class="copy" type="button">복사</button></div>
+<pre>항목마다 '낸 사람'을 고르지 말고, 참석자를 넣을 때 총무를 한 명 지정하게 해 줘.
+모든 지출은 총무가 낸 것으로 보고 계산해서, 나머지 사람들이 총무에게 얼마를 보내면 되는지 나오게 해 줘.</pre>
+        </div>
+        <p><b>검산:</b> 총무를 민수로 두고 2단계와 같은 금액을 넣으면 지영, 서준, 나가 각각 83,825원을 민수에게 보내는 <b>3번</b>이 나와야 합니다. 총무를 다른 사람으로 바꾸면 받는 사람도 바뀌어야 합니다.</p>
+      </div></li>
+    </ol>
+
+    <h3>고치기 ⑤ 총무 계좌번호 넣기</h3>
+    <ol class="steps">
+      <li><div class="step-body">
+        <p>입금할 계좌번호가 문장에 들어가게 해 보세요.</p>
+        <div class="prompt">
+          <div class="prompt-top"><span class="prompt-label">고치는 말 · 계좌번호</span><button class="copy" type="button">복사</button></div>
+<pre>맨 위에 총무 계좌번호를 입력하는 칸을 따로 만들어 줘.
+단톡방용 문장에서 '인원별 부담액' 부분은 빼고, 그 자리에 '총무 계좌: ○○'가 들어가게 해 줘.
+계좌번호를 안 넣으면 그 자리는 비워 둬.</pre>
+        </div>
+        <p><b>검산:</b> 계좌번호를 넣고 복사한 문장에 계좌가 보이는지, 비우고 복사하면 <b>"총무 계좌: "</b>만 남는지 확인하세요.</p>
+        <p class="note">연습할 때는 진짜 계좌번호 대신 "국민 123-456 민수" 같은 가짜 번호를 쓰세요.</p>
+      </div></li>
+    </ol>
+
+    <h3>완성 확인</h3>
+    <ul class="check" data-check="fix">
+      <li><label><input type="checkbox" id="f-1"><span>영수증 6장을 넣으면 총액 335,300원, 1인당 83,825원이 나오나요?</span></label></li>
+      <li><label><input type="checkbox" id="f-2"><span>총무가 모두 냈을 때 송금이 3번(83,825원씩)으로 나오나요?</span></label></li>
+      <li><label><input type="checkbox" id="f-3"><span>한 항목을 일부 사람끼리만 나누면 그 사람들 몫만 바뀌나요?</span></label></li>
+      <li><label><input type="checkbox" id="f-4"><span>복사한 문장을 메모장에 붙여 넣으면 총액, 내역, 계좌, 송금 안내가 보이나요?</span></label></li>
+      <li><label><input type="checkbox" id="f-5"><span>복제해 두었고, 말로 한 번 되돌려 봤나요?</span></label></li>
+    </ul>
+    <p class="check-count" data-count="fix"></p>
+  </div>
+</section>
+
+<!-- ============================== 4 모아 두기 ============================== -->
+<section class="block" id="save">
+  <div class="wrap">
+    <div class="block-head">
+      <p class="eyebrow">4단계 · 약 5분</p>
+      <h2>부탁 문장 모아 두기</h2>
+      <p class="summary">지금까지 고친 내용을 한 문장으로 모으면 다음에 한 번에 만들 수 있습니다. 2일차에는 이 계산기를 내 주소로 올립니다.</p>
+    </div>
+    <div class="prompt">
+      <div class="prompt-top"><span class="prompt-label">처음부터 한 번에 만드는 부탁 문장</span><button class="copy" type="button">복사</button></div>
+<pre>모임 정산 계산기를 만들어 줘.
+- 맨 위에 총무 계좌번호 입력 칸 (비워 둘 수 있음)
+- 참석자 이름을 넣고, 그중 한 명을 총무로 지정. 모든 지출은 총무가 낸 것으로 계산
+- 지출 항목은 이름과 금액을 입력하고, 항목마다 나눌 사람을 고를 수 있게 해 줘 (기본은 전원)
+- 영수증 사진을 올리면 항목 이름과 금액이 입력 칸에 채워지게 해 줘. 바로 추가하지 말고 내가 확인하고 추가
+- 결과: 총액, 인원별 부담액, 누가 누구에게 얼마 보내는지 (보내는 횟수는 가장 적게)
+- '단톡방용 문장 복사' 버튼: 총액, 지출 내역, 총무 계좌, 송금 안내가 들어가게
+- 1원 단위가 남으면 한 사람이 더 부담해서 총합이 맞게
+- 휴대폰에서도 보기 좋게 큰 글씨와 큰 버튼
+만들기 전에 화면이 어떻게 생길지 먼저 설명해 줘.</pre>
+    </div>
+    <p class="note" style="margin-top:.8rem">이 문장을 메모장에 저장해 두세요. 한 번에 여러 가지를 부탁하면 결과가 달라질 수 있으니, 안 되는 부분은 3단계처럼 하나씩 고치는 것이 안전합니다.</p>
+
+    <h3>돈 이야기에서 지킬 것</h3>
+    <div class="dodont">
+      <div class="dont"><h4>하지 말 것</h4><ul>
+        <li>카드번호·계좌번호가 보이는 영수증 올리기</li>
+        <li>계산기가 알려 준 대로 확인 없이 송금하기</li>
+        <li>실제 계좌번호를 공개된 곳에 올리기</li>
+      </ul></div>
+      <div class="do"><h4>이렇게</h4><ul>
+        <li>민감한 숫자는 가리고 찍기</li>
+        <li>금액은 영수증과 한 번 더 맞춰 보고 송금은 내가 직접</li>
+        <li>정산 문장은 모임 단톡방에만 붙여 넣기</li>
+      </ul></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== 막힐 때 ============================== -->
+<section class="block" id="help">
+  <div class="wrap">
+    <div class="block-head">
+      <p class="eyebrow">막힐 때</p>
+      <h2>자주 막히는 곳</h2>
+    </div>
+    <div class="faq">
+      <details><summary>채팅창 옆에 계산기가 안 떠요</summary><p>설정 → 기능에서 아티팩트와 파일 생성 관련 항목이 켜져 있는지 확인하고, "계산기를 아티팩트로 다시 만들어 줘"라고 부탁해 보세요.</p></details>
+      <details><summary>계산이 틀려요</summary><p>2단계처럼 금액을 하나씩 영수증과 대조해 보세요. 그래도 틀리면 "총액이 335,300원이어야 하는데 ○○원으로 나와. 계산을 다시 점검해 줘"처럼 <b>맞는 숫자와 틀린 숫자</b>를 함께 말해 주세요.</p></details>
+      <details><summary>고쳤더니 다른 게 망가졌어요</summary><p>"방금 고친 것을 취소하고 이전 상태로 되돌려 줘"라고 말하세요. 미리 복제해 둔 것이 있으면 그 복제본에서 다시 시작해도 됩니다. 한 번에 여러 가지를 고치면 원인을 찾기 어렵습니다.</p></details>
+      <details><summary>영수증 사진이 잘 안 읽혀요</summary><p>흐리거나 구겨진 영수증(receipt6)은 읽기 어렵습니다. 합계가 안 읽히면 직접 입력하세요. 읽은 값은 언제나 영수증과 맞춰 본 뒤에 추가합니다.</p></details>
+      <details><summary>복사 버튼을 눌렀는데 붙여 넣어지지 않아요</summary><p>카카오톡 안에서 연 화면은 복사가 막힐 때가 있습니다. 주소를 Chrome이나 Safari에서 다시 열어 보세요. 그래도 안 되면 "복사 대신 문장을 화면에 보여 주고 길게 눌러 복사하게 해 줘"라고 부탁하세요.</p></details>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p><b>오늘 가져가는 것</b>: 말로 만든 정산 계산기, 검산한 숫자(335,300원 · 83,825원), 메모장에 저장한 부탁 문장.</p>
+    <p style="margin-top:1rem">화면과 메뉴 이름은 Claude 업데이트에 따라 조금 다를 수 있습니다. 실습 영수증은 이 강의의 연습용 가상 자료입니다.</p>
+    <p style="margin-top:1rem"><a href="examples/settle.html" target="_blank" rel="noopener">완성 예시 계산기 열어 보기</a></p>
+  </div>
+</footer>
+
+<script>
+(function () {
+  document.querySelectorAll(".prompt").forEach(function (card) {
+    var btn = card.querySelector(".copy"), pre = card.querySelector("pre");
+    if (!btn || !pre) return;
+    btn.addEventListener("click", function () {
+      var done = function () {
+        btn.textContent = "복사됨"; btn.classList.add("done");
+        setTimeout(function () { btn.textContent = "복사"; btn.classList.remove("done"); }, 1800);
+      };
+      var fallback = function () {
+        var range = document.createRange(); range.selectNodeContents(pre);
+        var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+        try { document.execCommand("copy") ? done() : (btn.textContent = "길게 눌러 복사"); }
+        catch (e) { btn.textContent = "길게 눌러 복사"; }
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(pre.textContent).then(done, fallback);
+      else fallback();
+    });
+  });
+
+  function load(key) { try { return JSON.parse(localStorage.getItem(key) || "{}"); } catch (e) { return {}; } }
+  function save(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {} }
+  document.querySelectorAll("[data-check]").forEach(function (list) {
+    var key = "settle-guide-" + list.dataset.check, state = load(key);
+    var boxes = list.querySelectorAll("input[type=checkbox]");
+    var count = document.querySelector('[data-count="' + list.dataset.check + '"]');
+    function update() {
+      var n = 0; boxes.forEach(function (b) { if (b.checked) n++; });
+      if (count) count.textContent = n === boxes.length ? "모두 확인했습니다." : boxes.length + "개 중 " + n + "개 확인";
+    }
+    boxes.forEach(function (b) {
+      b.checked = !!state[b.id];
+      b.addEventListener("change", function () { state[b.id] = b.checked; save(key, state); update(); });
+    });
+    update();
+  });
+
+  var links = Array.prototype.slice.call(document.querySelectorAll(".lesson-nav a"));
+  var sections = links.map(function (a) { return document.querySelector(a.getAttribute("href")); });
+  if ("IntersectionObserver" in window) {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        links.forEach(function (a) { a.setAttribute("aria-current", a.getAttribute("href") === "#" + e.target.id ? "true" : "false"); });
+      });
+    }, { rootMargin: "-45% 0px -50% 0px" });
+    sections.forEach(function (s) { if (s) io.observe(s); });
+  }
+})();
+</script>
+</body>
+</html>
