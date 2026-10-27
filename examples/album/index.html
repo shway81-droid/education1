@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>가족 앨범</title>
+<style>
+:root{--bg:#f6f4ef;--card:#fff;--text:#2a2622;--sub:#7a736a;--line:#e4dfd5;--accent:#c2552d}
+@media (prefers-color-scheme:dark){:root{--bg:#15130f;--card:#201d18;--text:#f0ece4;--sub:#a79f93;--line:#35302a;--accent:#ee8a62}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:18px/1.6 -apple-system,"Malgun Gothic","Apple SD Gothic Neo",sans-serif}
+header{max-width:1100px;margin:0 auto;padding:32px 16px 8px}
+h1{margin:0;font-size:30px}
+header p{margin:4px 0 0;color:var(--sub)}
+main{max-width:1100px;margin:0 auto;padding:0 16px 40px}
+section{margin-top:28px}
+h2{font-size:22px;margin:0 0 12px;padding-bottom:8px;border-bottom:2px solid var(--line)}
+h2 small{font-size:16px;color:var(--sub);font-weight:400;margin-left:8px}
+.grid{display:grid;grid-template-columns:1fr;gap:16px}
+@media (min-width:640px){.grid{grid-template-columns:repeat(2,1fr)}}
+@media (min-width:960px){.grid{grid-template-columns:repeat(3,1fr)}}
+.card{margin:0;background:var(--card);border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.12)}
+.card button{display:block;width:100%;padding:0;border:0;background:none;cursor:zoom-in}
+.card img{display:block;width:100%;height:auto;aspect-ratio:1456/1088;object-fit:cover;background:var(--line);transition:transform .2s}
+.card button:hover img{transform:scale(1.02)}
+.card .clip{overflow:hidden}
+.card figcaption{padding:10px 14px 12px}
+.place{font-weight:700;font-size:19px}
+.note{margin-top:2px;font-size:17px}
+.time{margin-top:4px;font-size:15px;color:var(--sub)}
+.badge{display:inline-block;margin-left:6px;font-size:13px;font-weight:600;color:var(--accent);border:1px solid var(--accent);border-radius:999px;padding:0 8px;vertical-align:2px}
+/* 크게 보기 */
+#lb{position:fixed;inset:0;z-index:10;background:rgba(0,0,0,.96);display:none;flex-direction:column;align-items:center;justify-content:center;padding:12px;color:#fff}
+#lb.open{display:flex}
+#lb img{max-width:100%;max-height:calc(100vh - 150px);max-height:calc(100dvh - 150px);object-fit:contain;border-radius:6px}
+#lb .cap{margin-top:12px;text-align:center;max-width:720px}
+#lb .cap b{font-size:20px}
+#lb .cap span{display:block;color:#cfc8bb;font-size:16px}
+#lb button{position:absolute;border:0;color:#fff;background:rgba(255,255,255,.16);border-radius:999px;cursor:pointer;font-size:28px;line-height:1;width:56px;height:56px}
+#lb button:hover{background:rgba(255,255,255,.3)}
+#lb .close{top:12px;right:12px}
+#lb .prev{left:12px;top:50%;transform:translateY(-50%)}
+#lb .next{right:12px;top:50%;transform:translateY(-50%)}
+#lb .count{position:absolute;top:22px;left:16px;color:#cfc8bb;font-size:16px}
+@media (max-width:640px){#lb .prev,#lb .next{top:auto;bottom:16px;transform:none}}
+</style>
+</head>
+<body>
+<header>
+  <h1>🎢 가족 앨범</h1>
+  <p id="sub"></p>
+</header>
+<main>
+  <section>
+    <h2>2026년 10월 3일 (토) · 경주월드 나들이<small id="cnt"></small></h2>
+    <div class="grid" id="grid"></div>
+  </section>
+</main>
+
+<div id="lb" role="dialog" aria-modal="true" aria-label="사진 크게 보기">
+  <span class="count" id="lbcount"></span>
+  <button class="close" aria-label="닫기">✕</button>
+  <button class="prev" aria-label="이전 사진">‹</button>
+  <button class="next" aria-label="다음 사진">›</button>
+  <img id="lbimg" alt="">
+  <div class="cap" id="lbcap"></div>
+</div>
+
+<script>
+// 사진 파일은 같은 폴더에 그대로 두고 이름만 불러옵니다. 시각은 파일 이름(촬영 시각)과 같습니다.
+// same: 몇 초 간격으로 찍은 비슷한 사진. 앨범에는 대표 한 장만 보이고, 나머지 파일은 폴더에 그대로 남아 있습니다.
+var photos=[
+ {f:"IMG_20261003_100512",place:"정문 앞",note:"경주월드 도착! 정문 앞에서 다 같이 한 장",same:1},
+ {f:"IMG_20261003_104130",place:"회전목마",note:"회전목마 타고 카메라에 손을 흔들어요"},
+ {f:"IMG_20261003_112208",place:"롤러코스터 앞",note:"롤러코스터 앞에서 두 팔 번쩍!"},
+ {f:"IMG_20261003_115242",place:"바이킹 앞",note:"바이킹 타기 전, 브이!",same:1},
+ {f:"IMG_20261003_124355",place:"푸드코트",note:"점심은 떡볶이와 김밥으로 든든하게"},
+ {f:"IMG_20261003_133120",place:"간식 가게",note:"츄러스 하나 들고 기념 사진",same:1},
+ {f:"IMG_20261003_141605",place:"범퍼카",note:"범퍼카 운전대는 내가 잡았다!"},
+ {f:"IMG_20261003_150247",place:"관람차 안",note:"관람차 안에서 둘이 한 장"},
+ {f:"IMG_20261003_152410",place:"관람차 창밖",note:"관람차에서 내려다본 호수와 단풍"},
+ {f:"IMG_20261003_161233",place:"단풍길",note:"단풍길을 손잡고 걸어요"},
+ {f:"IMG_20261003_170318",place:"기념품샵",note:"머리띠를 쓰고 거울 앞에서 찰칵"},
+ {f:"IMG_20261003_180651",place:"해 질 무렵",note:"하루의 끝, 노을 속 우리 가족"}
+];
+var total=15;
+function when(f){var t=f.slice(-6),h=+t.slice(0,2);return(h<12?"오전 ":"오후 ")+(h%12||12)+"시 "+t.slice(2,4)+"분"}
+function esc(s){return s.replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+
+document.getElementById("sub").textContent="경주월드 나들이 · 사진 "+total+"장 중 "+photos.length+"장 (비슷한 사진은 대표 한 장만)";
+document.getElementById("cnt").textContent=photos.length+"장";
+document.getElementById("grid").innerHTML=photos.map(function(p,i){
+  var badge=p.same?'<span class="badge">대표</span>':"";
+  return '<figure class="card"><button type="button" data-i="'+i+'" aria-label="'+esc(p.place)+' 사진 크게 보기"><div class="clip"><img src="'+p.f+'.jpg" alt="'+esc(p.place)+': '+esc(p.note)+'" loading="lazy"></div></button>'+
+    '<figcaption><div class="place">'+esc(p.place)+badge+'</div><div class="note">'+esc(p.note)+'</div><div class="time">'+when(p.f)+'</div></figcaption></figure>';
+}).join("");
+
+// 크게 보기: 누르면 열림, 좌우 버튼·방향키·옆으로 밀기로 넘기고, ✕·바깥·Esc로 닫음
+var lb=document.getElementById("lb"),img=document.getElementById("lbimg"),cap=document.getElementById("lbcap"),count=document.getElementById("lbcount"),cur=0,opener=null;
+function show(i){
+  cur=(i+photos.length)%photos.length;var p=photos[cur];
+  img.src=p.f+".jpg";img.alt=p.place+": "+p.note;
+  cap.innerHTML="<b>"+esc(p.place)+"</b><span>"+esc(p.note)+"</span><span>"+when(p.f)+(p.same?" · 비슷한 사진 "+(p.same+1)+"장 중 대표":"")+"</span>";
+  count.textContent=(cur+1)+" / "+photos.length;
+}
+function open(i,el){opener=el;show(i);lb.classList.add("open");document.body.style.overflow="hidden";lb.querySelector(".close").focus()}
+function close(){lb.classList.remove("open");document.body.style.overflow="";if(opener)opener.focus()}
+document.getElementById("grid").addEventListener("click",function(e){var b=e.target.closest("button[data-i]");if(b)open(+b.dataset.i,b)});
+lb.querySelector(".close").onclick=close;
+lb.querySelector(".prev").onclick=function(){show(cur-1)};
+lb.querySelector(".next").onclick=function(){show(cur+1)};
+lb.addEventListener("click",function(e){if(e.target===lb)close()});
+document.addEventListener("keydown",function(e){
+  if(!lb.classList.contains("open"))return;
+  if(e.key==="Escape")close();else if(e.key==="ArrowLeft")show(cur-1);else if(e.key==="ArrowRight")show(cur+1);
+});
+var sx=null;
+lb.addEventListener("touchstart",function(e){sx=e.touches[0].clientX},{passive:true});
+lb.addEventListener("touchend",function(e){
+  if(sx===null)return;var dx=e.changedTouches[0].clientX-sx;sx=null;
+  if(Math.abs(dx)>50)show(cur+(dx<0?1:-1));
+},{passive:true});
+</script>
+</body>
+</html>

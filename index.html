@@ -3,16 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>말로 만드는 모임 정산 계산기</title>
-<meta name="description" content="Claude에게 말로 부탁해서 모임 정산 계산기를 만들고, 영수증으로 검산하고, 말로 고쳐 가는 과정을 집에서 따라 하는 안내입니다.">
-<meta property="og:title" content="말로 만드는 모임 정산 계산기">
-<meta property="og:description" content="코딩 없이 말로 부탁해서 정산 계산기를 만들고 고쳐 보기">
+<title>말로 만드는 앱 세 개 · 1일차</title>
+<meta name="description" content="Claude에게 말로 부탁해서 정산 계산기, 가족 앨범, 가계부를 만들고 고쳐 보는 1일차 실습을 집에서 따라 하는 안내입니다.">
+<meta property="og:title" content="말로 만드는 앱 세 개 · 1일차">
+<meta property="og:description" content="코딩 없이 말로 부탁해서 정산 계산기, 가족 앨범, 가계부 만들기">
 <meta property="og:image" content="img/app-phone.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
 <style>
-/* Layout: 한 줄 기둥(본문 46rem) 안내지. 단계마다 '부탁 문장(노란 메모) → 확인할 것 → 고치기'. */
+/* Layout: 한 줄 기둥(본문 46rem) 안내지. 교시마다 '결과 → 준비물 → 따라 하기 → 고치기 → 확인 → 막힐 때'. 부탁 문장은 노란 메모 카드. */
 :root {
   --paper:#f5f6f2; --surface:#fff; --ink:#1c2622; --muted:#5b6863; --line:#dbe1dd;
   --accent:#1d6b58; --accent-ink:#fff; --accent-soft:#e2eee8;
@@ -37,7 +37,7 @@ body { margin:0; background:var(--paper); color:var(--ink); font-family:var(--fo
 img { max-width:100%; height:auto; display:block; }
 a { color:var(--accent); text-underline-offset:.18em; }
 :focus-visible { outline:3px solid var(--accent); outline-offset:2px; border-radius:4px; }
-h1,h2,h3 { font-family:var(--font-display); font-weight:700; line-height:1.3; text-wrap:balance; margin:0; }
+h1,h2,h3,h4 { font-family:var(--font-display); font-weight:700; line-height:1.3; text-wrap:balance; margin:0; }
 p { margin:0; }
 .wrap { max-width:46rem; margin:0 auto; padding-inline:1.1rem; }
 
@@ -45,9 +45,18 @@ p { margin:0; }
 .eyebrow { font-family:var(--font-mono); font-size:.78rem; letter-spacing:.08em; color:var(--accent); text-transform:uppercase; }
 .hero h1 { font-size:clamp(1.9rem,6vw,2.75rem); margin-top:.6rem; }
 .hero .lead { margin-top:1rem; color:var(--muted); max-width:38rem; }
-.hero-grid { display:grid; grid-template-columns:minmax(0,1fr) 15rem; gap:1.6rem; align-items:start; margin-top:2rem; }
-.hero-grid ul { margin:0; padding-left:1.1rem; display:grid; gap:.4rem; }
-@media (max-width:640px){ .hero-grid { grid-template-columns:1fr; } }
+.results { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.8rem; margin-top:2rem; }
+.result-card { display:flex; flex-direction:column; gap:.5rem; text-decoration:none; color:inherit; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:.6rem; }
+.result-card:hover { border-color:var(--accent); }
+.result-card .thumb { aspect-ratio:4/5; overflow:hidden; border-radius:6px; background:var(--accent-soft); }
+.result-card .thumb img { width:100%; height:100%; object-fit:cover; object-position:top center; }
+.result-card .when { font-family:var(--font-mono); font-size:.72rem; color:var(--accent); letter-spacing:.04em; }
+.result-card strong { font-size:.95rem; line-height:1.4; }
+@media (max-width:560px){
+  .results { grid-template-columns:1fr; }
+  .result-card { flex-direction:row; align-items:center; }
+  .result-card .thumb { width:5.5rem; flex:none; aspect-ratio:1; }
+}
 
 .lesson-nav { position:sticky; top:env(safe-area-inset-top,0px); z-index:5; background:color-mix(in srgb,var(--paper) 92%,transparent); backdrop-filter:blur(8px); border-bottom:1px solid var(--line); }
 .lesson-nav .wrap { display:flex; gap:.4rem; padding-block:.55rem; overflow-x:auto; }
@@ -60,13 +69,18 @@ section.block:last-of-type { border-bottom:0; }
 .block-head h2 { font-size:clamp(1.55rem,5vw,2.05rem); }
 .block-head .summary { color:var(--muted); }
 h3 { font-size:1.22rem; margin-top:2.2rem; margin-bottom:.8rem; }
+h4 { font-size:1.05rem; margin-top:1.8rem; margin-bottom:.6rem; color:var(--accent); }
 .note { font-size:.92rem; color:var(--muted); }
 
 figure { margin:0; }
 figure.shot { background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:.6rem; }
 figure.shot img { border-radius:6px; margin-inline:auto; }
-figure.shot.phone img { max-height:34rem; width:auto; }
 figcaption { font-size:.9rem; color:var(--muted); margin-top:.6rem; line-height:1.6; }
+.pair { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.8rem; align-items:start; }
+@media (max-width:640px){ .pair { grid-template-columns:1fr; } }
+.hero-grid { display:grid; grid-template-columns:minmax(0,1fr) 15rem; gap:1.6rem; align-items:start; }
+.hero-grid ul { margin:0; padding-left:1.1rem; display:grid; gap:.4rem; }
+@media (max-width:640px){ .hero-grid { grid-template-columns:1fr; } }
 
 .kit { list-style:none; padding:0; margin:0; display:grid; gap:.45rem; }
 .kit li { display:flex; gap:.6rem; align-items:baseline; }
@@ -103,10 +117,11 @@ ol.steps > li::before { content:counter(step); width:2.3rem; height:2.3rem; bord
 .answer b.big { font-family:var(--font-display); font-size:1.3rem; }
 .answer .row { display:flex; justify-content:space-between; gap:1rem; font-variant-numeric:tabular-nums; }
 
-table.t { width:100%; border-collapse:collapse; font-size:.95rem; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; }
-table.t th,table.t td { padding:.5rem .7rem; text-align:left; border-bottom:1px solid var(--line); }
-table.t th { background:var(--accent-soft); font-size:.85rem; }
-table.t tr:last-child td { border-bottom:0; }
+table.t { width:100%; border-collapse:collapse; font-size:.93rem; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; font-variant-numeric:tabular-nums; }
+table.t th,table.t td { padding:.45rem .6rem; text-align:left; border-bottom:1px solid var(--line); }
+table.t th { background:var(--accent-soft); font-size:.82rem; }
+table.t td.n,table.t th.n { text-align:right; }
+table.t tr:last-child td { border-bottom:0; font-weight:700; }
 
 .check { list-style:none; padding:0; margin:0; display:grid; gap:.5rem; }
 .check label { display:flex; gap:.7rem; align-items:flex-start; cursor:pointer; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:.65rem .8rem; }
@@ -134,6 +149,7 @@ table.t tr:last-child td { border-bottom:0; }
 @media (max-width:560px){ .downloads { grid-template-columns:1fr; } }
 
 footer { padding-block:2.5rem 3.5rem; color:var(--muted); font-size:.9rem; }
+footer ul { padding-left:1.1rem; display:grid; gap:.25rem; }
 @media (prefers-reduced-motion:no-preference){ html { scroll-behavior:smooth; } }
 </style>
 </head>
@@ -141,35 +157,32 @@ footer { padding-block:2.5rem 3.5rem; color:var(--muted); font-size:.9rem; }
 
 <header class="hero">
   <div class="wrap">
-    <p class="eyebrow">Claude로 시작하는 바이브 코딩 · 1일차 1교시</p>
-    <h1>말로 부탁해서 모임 정산 계산기를 만들어 봐요</h1>
-    <p class="lead">코드를 한 줄도 쓰지 않습니다. Claude에게 문장으로 부탁하고, 나온 화면을 눌러 보고, 마음에 안 드는 곳을 말로 고치면 됩니다. 노란 메모의 부탁 문장은 <b>복사</b>를 눌러 Claude 채팅창에 그대로 붙여 넣으세요.</p>
-    <div class="hero-grid">
-      <figure class="shot phone">
-        <img src="img/app-phone.jpg" alt="완성된 정산 계산기를 휴대폰 너비로 본 화면. 총무 계좌번호, 참석자, 지출 항목, 정산 결과와 송금 목록이 위에서 아래로 이어진다" width="390" height="2279" loading="eager" style="max-height:30rem">
-        <figcaption>이 안내를 끝내면 만들게 되는 계산기입니다. <a href="examples/settle.html" target="_blank" rel="noopener">완성 예시 직접 눌러 보기</a></figcaption>
-      </figure>
-      <div>
-        <p style="font-weight:600">이 계산기로 할 수 있는 것</p>
-        <ul>
-          <li>참석자와 지출을 넣으면 총액과 한 사람 부담액이 나옵니다.</li>
-          <li>누가 누구에게 얼마를 보내면 끝나는지, 보내는 횟수를 가장 적게 보여 줍니다.</li>
-          <li>술값처럼 일부만 나눌 항목은 마신 사람만 골라 나눕니다.</li>
-          <li>결과를 단톡방에 붙여 넣을 문장으로 복사합니다.</li>
-        </ul>
-      </div>
+    <p class="eyebrow">Claude로 시작하는 바이브 코딩 · 1일차</p>
+    <h1>말로 부탁해서 앱 세 개를 만들어 봐요</h1>
+    <p class="lead">코드를 한 줄도 쓰지 않습니다. Claude에게 문장으로 부탁하고, 나온 화면을 눌러 보고, 마음에 안 드는 곳을 말로 고치면 됩니다. 노란 메모의 부탁 문장은 <b>복사</b>를 눌러 Claude에 그대로 붙여 넣으세요. 실습에 쓴 영수증과 사진도 내려받을 수 있습니다.</p>
+    <div class="results">
+      <a class="result-card" href="#lesson1">
+        <div class="thumb"><img src="img/app-phone.jpg" alt="휴대폰 너비로 본 정산 계산기. 참석자, 지출 항목, 정산 결과와 송금 목록이 보인다" loading="eager"></div>
+        <div><span class="when">1교시 · 채팅창</span><br><strong>모임 정산 계산기</strong></div>
+      </a>
+      <a class="result-card" href="#lesson2">
+        <div class="thumb"><img src="img/album-phone.jpg" alt="휴대폰 너비로 본 가족 앨범. 사진마다 장소와 설명, 시각이 붙어 있다" loading="eager"></div>
+        <div><span class="when">2교시 · Code 탭</span><br><strong>사진 폴더로 가족 앨범</strong></div>
+      </a>
+      <a class="result-card" href="#lesson3">
+        <div class="thumb"><img src="img/gagyebu-phone.jpg" alt="휴대폰 너비로 본 가계부. 이번 달 합계와 분류별 막대그래프가 보인다" loading="eager"></div>
+        <div><span class="when">3교시 · Code 탭</span><br><strong>기록이 남는 가계부</strong></div>
+      </a>
     </div>
   </div>
 </header>
 
-<nav class="lesson-nav" aria-label="단계 이동">
+<nav class="lesson-nav" aria-label="교시 이동">
   <div class="wrap">
     <a href="#start">시작 전에</a>
-    <a href="#make">1 만들기</a>
-    <a href="#verify">2 검산</a>
-    <a href="#fix">3 고치기</a>
-    <a href="#save">4 모아 두기</a>
-    <a href="#help">막힐 때</a>
+    <a href="#lesson1">1교시 정산</a>
+    <a href="#lesson2">2교시 앨범</a>
+    <a href="#lesson3">3교시 가계부</a>
   </div>
 </nav>
 
@@ -179,37 +192,60 @@ footer { padding-block:2.5rem 3.5rem; color:var(--muted); font-size:.9rem; }
   <div class="wrap">
     <div class="block-head">
       <p class="eyebrow">시작 전에 한 번만</p>
-      <h2>준비할 것 세 가지</h2>
+      <h2>준비할 것 네 가지</h2>
     </div>
     <ul class="kit">
       <li><span><b>Claude 유료 계정</b>으로 claude.ai에 로그인해 주세요. 수업에서는 계정이 제공됩니다.</span></li>
-      <li><span><b>설정 → 기능(Capabilities)</b>에서 '코드 실행 및 파일 생성'과 '아티팩트' 관련 항목이 켜져 있는지 확인해 주세요. 계산기가 채팅창 옆 창에 뜨려면 필요합니다. 메뉴 이름은 화면에 따라 조금 다를 수 있습니다.</span></li>
+      <li><span><b>Claude 데스크톱 앱</b>(Windows·macOS)을 설치해 주세요. 1교시는 채팅창에서, 2·3교시는 앱의 <b>Code 탭</b>에서 합니다.</span></li>
+      <li><span><b>설정 → 기능(Capabilities)</b>에서 '코드 실행 및 파일 생성'과 아티팩트 관련 항목이 켜져 있는지 확인해 주세요. 메뉴 이름은 화면에 따라 조금 다를 수 있습니다.</span></li>
       <li><span><b>메모장</b>을 열어 두세요. 잘 된 부탁 문장을 모아 두면 2일차에 그대로 다시 씁니다.</span></li>
     </ul>
 
-    <h3>실습 영수증 받기</h3>
-    <div class="downloads"><a class="dl main" href="files/practice-receipts.zip" download="실습영수증.zip"><b>실습 영수증 6장 받기</b><span>압축 파일 · 1.8MB · 경주 가족여행(가상 자료)</span></a></div>
-    <p class="note" style="margin-top:.6rem">압축을 풀면 receipt1~6 사진이 나옵니다. 내 영수증으로 하실 때는 카드번호와 계좌번호가 보이지 않게 찍어 주세요.</p>
+    <h3>실습 자료 받기</h3>
+    <div class="downloads">
+      <a class="dl main" href="files/practice-receipts.zip" download="실습영수증.zip"><b>1교시 영수증 6장</b><span>압축 파일 · 1.8MB · 경주 가족여행(가상)</span></a>
+      <a class="dl main" href="files/practice-photos.zip" download="실습사진-경주월드.zip"><b>2교시 사진 15장</b><span>압축 파일 · 3.7MB · 경주월드 나들이(가상)</span></a>
+      <a class="dl main" href="files/gagyebu-receipts.zip" download="가계부-영수증.zip"><b>3교시 영수증 5장</b><span>압축 파일 · 0.5MB · 한 달 지출(가상)</span></a>
+    </div>
+    <p class="note" style="margin-top:.6rem">내 영수증이나 사진으로 하실 때는 카드번호와 계좌번호가 보이지 않게 가려 주세요. 사진은 원본이 아니라 <b>복사본</b>으로 하세요.</p>
 
-    <h3>모든 단계를 이 순서로 합니다</h3>
+    <h3>세 실습 모두 이 순서로 합니다</h3>
     <ol class="loop">
       <li><b>기준을 말한다</b>무엇을 어떻게 해 달라는지 문장으로 적어요</li>
-      <li><b>설명을 읽고 허락한다</b>만들기 전에 Claude가 보여 주는 화면 설명을 읽어요</li>
-      <li><b>결과를 직접 검산한다</b>숫자는 내 손으로 한 번 더</li>
+      <li><b>계획을 읽고 허락한다</b>만들기 전에 Claude가 보여 주는 계획을 읽어요</li>
+      <li><b>결과를 직접 확인한다</b>숫자와 사진은 내 눈으로 한 번 더</li>
       <li><b>말로 고친다</b>마음에 안 드는 곳을 그대로 말해요</li>
     </ol>
   </div>
 </section>
 
-<!-- ============================== 1 만들기 ============================== -->
-<section class="block" id="make">
+<!-- ============================== 1교시 ============================== -->
+<section class="block" id="lesson1">
   <div class="wrap">
     <div class="block-head">
-      <p class="eyebrow">1단계 · 약 15분 · 채팅창</p>
-      <h2>화면부터 설명 듣고 만들기</h2>
-      <p class="summary">처음 부탁에는 <b>"만들기 전에 화면이 어떻게 생길지 먼저 설명해 줘"</b>를 꼭 넣습니다. 설명이 마음에 안 들면 만들기 전에 고칠 수 있습니다.</p>
+      <p class="eyebrow">1교시 · 50분 · 채팅창</p>
+      <h2>모임 정산 계산기 만들기</h2>
+      <p class="summary">모임이나 여행 경비를 나누는 계산기를 말로 만들고, 영수증으로 검산하고, 말로 고쳐 갑니다. 채팅창 옆 창에 앱(아티팩트)이 바로 뜹니다.</p>
     </div>
 
+    <div class="hero-grid">
+      <figure class="shot">
+        <img src="img/app-phone.jpg" alt="완성된 정산 계산기를 휴대폰 너비로 본 화면. 총무 계좌번호, 참석자, 지출 항목, 정산 결과와 송금 목록이 위에서 아래로 이어진다" width="390" height="2279" loading="lazy" style="max-height:30rem;width:auto">
+        <figcaption>이 교시를 끝내면 만들게 되는 계산기입니다. <a href="examples/settle.html" target="_blank" rel="noopener">완성 예시 눌러 보기</a></figcaption>
+      </figure>
+      <div>
+        <p style="font-weight:600">이 계산기로 할 수 있는 것</p>
+        <ul>
+          <li>참석자와 지출을 넣으면 총액과 부담액이 나옵니다.</li>
+          <li>누가 누구에게 얼마를 보내면 끝나는지, 보내는 횟수를 가장 적게 보여 줍니다.</li>
+          <li>술값처럼 일부만 나눌 항목은 마신 사람만 골라 나눕니다.</li>
+          <li>결과를 단톡방에 붙여 넣을 문장으로 복사합니다.</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>1. 화면부터 설명 듣고 만들기</h3>
+    <p class="note" style="margin-bottom:1rem">처음 부탁에는 <b>"만들기 전에 화면이 어떻게 생길지 먼저 설명해 줘"</b>를 꼭 넣습니다. 설명이 마음에 안 들면 만들기 전에 고칠 수 있습니다.</p>
     <ol class="steps">
       <li><div class="step-body">
         <p>claude.ai에서 새 채팅을 열고 아래 부탁 문장을 붙여 넣어 주세요.</p>
@@ -234,7 +270,7 @@ footer { padding-block:2.5rem 3.5rem; color:var(--muted); font-size:.9rem; }
             <li>내가 부탁한 것 중 빠진 것은 없는지 (빠졌다면 "○○도 넣어 줘"라고 먼저 말해요)</li>
           </ul>
         </div>
-        <p class="note">Claude가 모호한 부분은 짐작한 내용을 함께 적어 줍니다. 틀린 가정이 있으면 이때 바로잡으세요.</p>
+        <p class="note">Claude가 짐작한 내용은 설명에 함께 적어 줍니다. 틀린 가정이 있으면 이때 바로잡으세요.</p>
       </div></li>
       <li><div class="step-body">
         <p>설명이 괜찮으면 허락해 주세요.</p>
@@ -245,26 +281,16 @@ footer { padding-block:2.5rem 3.5rem; color:var(--muted); font-size:.9rem; }
       </div></li>
       <li><div class="step-body">
         <p>채팅창 옆 창에 계산기가 뜨면 눌러 보세요.</p>
-        <p>이름을 넣고 추가 버튼을 눌러 보고, 금액을 넣어 총액이 바뀌는지 확인합니다. 이 옆 창의 앱을 <b>아티팩트</b>라고 부릅니다.</p>
+        <p>이름을 넣고 추가 버튼을 눌러 보고, 금액을 넣어 총액이 바뀌는지 확인합니다.</p>
       </div></li>
     </ol>
-  </div>
-</section>
 
-<!-- ============================== 2 검산 ============================== -->
-<section class="block" id="verify">
-  <div class="wrap">
-    <div class="block-head">
-      <p class="eyebrow">2단계 · 약 10분</p>
-      <h2>영수증으로 검산하기</h2>
-      <p class="summary">Claude가 만든 계산기도 틀릴 수 있습니다. 숫자는 내 손으로 한 번 맞춰 봐야 믿을 수 있습니다.</p>
-    </div>
-
+    <h3>2. 영수증으로 검산하기</h3>
+    <p class="note" style="margin-bottom:1rem">Claude가 만든 계산기도 틀릴 수 있습니다. 숫자는 내 손으로 한 번 맞춰 봐야 믿을 수 있습니다.</p>
     <figure class="shot" style="max-width:15rem">
       <img src="img/receipt-sample.jpg" alt="실습 영수증 receipt1. 한솔마을 한정식, 합계 68,000원, 카드번호 일부가 가려져 있다" width="390" height="522" loading="lazy">
       <figcaption>실습 영수증 한 장(receipt1). 카드번호는 가려져 있습니다.</figcaption>
     </figure>
-
     <ol class="steps" style="margin-top:1.4rem">
       <li><div class="step-body">
         <p>참석자 네 명을 넣어 주세요.</p>
@@ -272,7 +298,7 @@ footer { padding-block:2.5rem 3.5rem; color:var(--muted); font-size:.9rem; }
       </div></li>
       <li><div class="step-body">
         <p>영수증 6장의 합계 금액을 항목으로 하나씩 넣어 주세요.</p>
-        <p>가게 이름과 영수증 맨 아래의 <b>합계</b> 금액을 읽어 넣습니다. 이 단계에서는 여섯 장 모두 한 사람이 냈고, 네 명이 똑같이 나누는 것으로 합니다.</p>
+        <p>가게 이름과 영수증 맨 아래의 <b>합계</b> 금액을 읽어 넣습니다. 여섯 장 모두 한 사람이 냈고, 네 명이 똑같이 나누는 것으로 합니다.</p>
         <p class="note">receipt1은 품목을 더하면 64,000원인데 찍힌 합계는 68,000원입니다. 합계 금액(68,000원)을 쓰세요. receipt6은 일부러 구겨지고 흐리게 만든 사진이라 숫자를 잘 보고 읽어야 합니다.</p>
       </div></li>
       <li><div class="step-body">
@@ -281,67 +307,52 @@ footer { padding-block:2.5rem 3.5rem; color:var(--muted); font-size:.9rem; }
           <div class="row"><span>총액</span><b class="big">335,300원</b></div>
           <div class="row"><span>1인당 금액 (4명)</span><b class="big">83,825원</b></div>
         </div>
-        <p class="note">같으면 성공입니다. 다르면 금액을 하나씩 영수증과 대조해 보세요. 어느 줄이 틀렸는지는 Claude에게 "영수증 금액 6개 합이 335,300원이 되도록 계산을 다시 점검해 줘"라고 부탁해도 됩니다.</p>
+        <p class="note">같으면 성공입니다. 다르면 금액을 하나씩 영수증과 대조해 보세요. "영수증 금액 6개 합이 335,300원이 되도록 계산을 다시 점검해 줘"라고 부탁해도 됩니다.</p>
       </div></li>
     </ol>
-  </div>
-</section>
 
-<!-- ============================== 3 고치기 ============================== -->
-<section class="block" id="fix">
-  <div class="wrap">
-    <div class="block-head">
-      <p class="eyebrow">3단계 · 약 25분</p>
-      <h2>말로 하나씩 고치기</h2>
-      <p class="summary">고칠 점을 한 번에 하나씩, 구체적으로 말합니다. 고친 뒤에는 2단계와 같은 금액으로 다시 검산하세요.</p>
-    </div>
-
-    <div class="ask" style="margin-bottom:1.6rem">
+    <h3>3. 말로 하나씩 고치기</h3>
+    <div class="ask" style="margin-bottom:1rem">
       <p class="who">고치기 전에 이것만</p>
       <ul>
         <li>고치기 전에 아티팩트 제목 메뉴에서 <b>복제(Duplicate)</b>해 두세요. 망가져도 원본이 남습니다.</li>
-        <li>고친 것이 마음에 안 들면 "방금 고친 것을 취소하고 이전 상태로 되돌려 줘"라고 말하세요.</li>
-        <li>"좀 더 좋게 해 줘"처럼 막연하게 말하지 말고, 어디를 어떻게 바꿀지 적어 주세요.</li>
+        <li>마음에 안 들면 "방금 고친 것을 취소하고 이전 상태로 되돌려 줘"라고 말하세요.</li>
+        <li>"좀 더 좋게 해 줘"처럼 막연하게 말하지 말고, 어디를 어떻게 바꿀지 적어 주세요. 고친 뒤에는 같은 금액으로 다시 검산하세요.</li>
       </ul>
     </div>
 
-    <h3>고치기 ① 영수증 사진으로 입력하기</h3>
-    <ol class="steps">
-      <li><div class="step-body">
-        <p>항목을 일일이 치지 않아도 영수증 사진을 올리면 입력되게 해 보세요.</p>
-        <div class="prompt">
-          <div class="prompt-top"><span class="prompt-label">고치는 말 · 영수증 추가</span><button class="copy" type="button">복사</button></div>
+    <h4>고치기 ① 영수증 사진으로 입력하기</h4>
+    <div class="step-body">
+      <div class="prompt">
+        <div class="prompt-top"><span class="prompt-label">고치는 말 · 영수증 추가</span><button class="copy" type="button">복사</button></div>
 <pre>지출 항목을 일일이 입력하지 않아도, 영수증 사진만 올리면 항목 이름과 금액이 입력 칸에 채워지게 해 줘.
 읽은 값은 바로 추가하지 말고, 내가 확인하고 고친 다음에 추가 버튼을 누르게 해 줘.
 금액을 못 읽으면 못 읽었다고 알려 줘.</pre>
-        </div>
-        <p>실습 영수증 사진을 올려서 가게 이름과 합계가 채워지는지 보세요. <b>채워진 숫자는 꼭 영수증과 맞춰 본 뒤</b> 추가하세요.</p>
-        <p class="note">만들어 둔 완성 예시로 실습 영수증 6장을 읽혀 본 결과, 합계 금액은 여섯 장 모두 맞게 읽혔습니다(합 335,300원). 가게 이름은 세 장이 엉뚱한 글자로 읽혔으니 보이는 대로 고쳐 쓰세요. 만드는 Claude와 환경에 따라 결과는 다를 수 있습니다.</p>
-        <details class="faq"><summary>앱 안에서 사진이 안 읽히면</summary>
-          <p>사진 인식은 Claude 화면과 인터넷 환경에 따라 동작하지 않을 수 있습니다. 그럴 때는 영수증 사진을 <b>채팅창에 직접 올리고</b> 아래처럼 부탁해 보세요. Claude가 사진을 읽어 계산기에 미리 넣어 줍니다.</p>
-          <div class="prompt" style="margin-top:.6rem">
-            <div class="prompt-top"><span class="prompt-label">고치는 말 · 사진을 채팅에 올릴 때</span><button class="copy" type="button">복사</button></div>
+      </div>
+      <p>실습 영수증 사진을 올려서 가게 이름과 합계가 채워지는지 보세요. <b>채워진 숫자는 꼭 영수증과 맞춰 본 뒤</b> 추가하세요.</p>
+      <p class="note">만들어 둔 완성 예시로 실습 영수증 6장을 읽혀 본 결과, 합계 금액은 여섯 장 모두 맞게 읽혔습니다(합 335,300원). 가게 이름은 세 장이 엉뚱한 글자로 읽혔으니 보이는 대로 고쳐 쓰세요. 만드는 Claude와 환경에 따라 결과는 다를 수 있습니다.</p>
+      <details class="faq"><summary>앱 안에서 사진이 안 읽히면</summary>
+        <p>사진 인식은 Claude 화면과 인터넷 환경에 따라 동작하지 않을 수 있습니다. 그럴 때는 영수증 사진을 <b>채팅창에 직접 올리고</b> 아래처럼 부탁해 보세요. Claude가 사진을 읽어 계산기에 미리 넣어 줍니다.</p>
+        <div class="prompt" style="margin-top:.6rem">
+          <div class="prompt-top"><span class="prompt-label">고치는 말 · 사진을 채팅에 올릴 때</span><button class="copy" type="button">복사</button></div>
 <pre>올린 영수증 6장을 한 장씩 읽어서 가게 이름과 합계 금액을 지출 항목으로 계산기에 미리 넣어 줘.
 읽기 어려운 글자나 숫자는 추측하지 말고 '확인 필요'라고 알려 줘.</pre>
-          </div>
-        </details>
-      </div></li>
-    </ol>
+        </div>
+      </details>
+    </div>
 
-    <h3>고치기 ② 단톡방에 붙여 넣을 문장 복사</h3>
-    <ol class="steps">
-      <li><div class="step-body">
-        <p>결과를 문장으로 복사하는 버튼을 만들어 달라고 해요.</p>
-        <div class="prompt">
-          <div class="prompt-top"><span class="prompt-label">고치는 말 · 복사 버튼</span><button class="copy" type="button">복사</button></div>
+    <h4>고치기 ② 단톡방에 붙여 넣을 문장 복사</h4>
+    <div class="step-body">
+      <div class="prompt">
+        <div class="prompt-top"><span class="prompt-label">고치는 말 · 복사 버튼</span><button class="copy" type="button">복사</button></div>
 <pre>정산 결과를 단톡방에 붙여 넣기 좋게 문장으로 복사하는 버튼을 만들어 줘.
 총액, 지출 내역, 누가 누구에게 얼마 보내는지가 들어가게 해 줘.</pre>
-        </div>
-        <p>버튼을 누른 뒤 메모장에 붙여 넣어서 문장이 잘 나오는지 확인하세요. 아래처럼 나오면 잘 된 것입니다.</p>
-        <div class="sample">
-          <div class="prompt-top"><span class="prompt-label">나오는 문장 예시 (복사하지 마세요)</span></div>
+      </div>
+      <p>버튼을 누른 뒤 메모장에 붙여 넣어서 문장이 잘 나오는지 확인하세요. 아래처럼 나오면 잘 된 것입니다.</p>
+      <div class="sample">
+        <div class="prompt-top"><span class="prompt-label">나오는 문장 예시 (복사하지 마세요)</span></div>
 <pre>🧾 정산 결과
-총액 335,300원 (4명)
+총액 335,300원 (4명, 총무 민수)
 
 [지출 내역]
 - 한솔마을 한정식 68,000원 (전원)
@@ -352,72 +363,43 @@ footer { padding-block:2.5rem 3.5rem; color:var(--muted); font-size:.9rem; }
 나 → 민수 83,825원
 서준 → 민수 83,825원
 지영 → 민수 83,825원</pre>
-        </div>
-      </div></li>
-    </ol>
+      </div>
+    </div>
 
-    <h3>고치기 ③ 마신 사람끼리만 나누기</h3>
-    <ol class="steps">
-      <li><div class="step-body">
-        <p>술값이나 밥값을 먹은 사람끼리만 나누도록 고쳐 보세요.</p>
-        <div class="prompt">
-          <div class="prompt-top"><span class="prompt-label">고치는 말 · 나눌 사람 고르기</span><button class="copy" type="button">복사</button></div>
+    <h4>고치기 ③ 마신 사람끼리만 나누기</h4>
+    <div class="step-body">
+      <div class="prompt">
+        <div class="prompt-top"><span class="prompt-label">고치는 말 · 나눌 사람 고르기</span><button class="copy" type="button">복사</button></div>
 <pre>지출 항목마다 나눌 사람을 고를 수 있게 해 줘.
 기본은 전원이고, 술값이나 밥값은 마신 사람끼리만 계산되게 해 줘.
 항목 목록에도 누가 나누는지 보이게 해 줘.</pre>
-        </div>
-        <p><b>검산:</b> 영수증 한 장(예: 카페 보문호수 23,500원)을 세 명만 고르고 다시 계산해 보세요. 그 항목은 세 명이 나눈 금액으로 바뀌고, 고르지 않은 사람의 금액은 그만큼 줄어야 합니다. 나누어떨어지지 않는 1원 단위는 한 사람이 더 부담해서 총합이 항상 맞아야 합니다.</p>
-      </div></li>
-    </ol>
+      </div>
+      <p><b>검산:</b> 영수증 한 장(예: 카페 보문호수 23,500원)을 세 명만 고르고 다시 계산해 보세요. 그 항목은 세 명이 나눈 금액으로 바뀌고, 고르지 않은 사람의 금액은 그만큼 줄어야 합니다. 나누어떨어지지 않는 1원 단위는 한 사람이 더 부담해서 총합이 항상 맞아야 합니다.</p>
+    </div>
 
-    <h3>고치기 ④ 총무가 모두 낸 것으로 계산하기</h3>
-    <ol class="steps">
-      <li><div class="step-body">
-        <p>항목마다 낸 사람을 고르는 대신, 총무 한 명이 모두 결제한 것으로 바꿔 보세요.</p>
-        <div class="prompt">
-          <div class="prompt-top"><span class="prompt-label">고치는 말 · 총무 지정</span><button class="copy" type="button">복사</button></div>
+    <h4>고치기 ④ 총무가 모두 낸 것으로 계산하기</h4>
+    <div class="step-body">
+      <div class="prompt">
+        <div class="prompt-top"><span class="prompt-label">고치는 말 · 총무 지정</span><button class="copy" type="button">복사</button></div>
 <pre>항목마다 '낸 사람'을 고르지 말고, 참석자를 넣을 때 총무를 한 명 지정하게 해 줘.
 모든 지출은 총무가 낸 것으로 보고 계산해서, 나머지 사람들이 총무에게 얼마를 보내면 되는지 나오게 해 줘.</pre>
-        </div>
-        <p><b>검산:</b> 총무를 민수로 두고 2단계와 같은 금액을 넣으면 지영, 서준, 나가 각각 83,825원을 민수에게 보내는 <b>3번</b>이 나와야 합니다. 총무를 다른 사람으로 바꾸면 받는 사람도 바뀌어야 합니다.</p>
-      </div></li>
-    </ol>
+      </div>
+      <p><b>검산:</b> 총무를 민수로 두고 앞의 금액을 넣으면 지영, 서준, 나가 각각 83,825원을 민수에게 보내는 <b>3번</b>이 나와야 합니다. 총무를 바꾸면 받는 사람도 바뀌어야 합니다.</p>
+    </div>
 
-    <h3>고치기 ⑤ 총무 계좌번호 넣기</h3>
-    <ol class="steps">
-      <li><div class="step-body">
-        <p>입금할 계좌번호가 문장에 들어가게 해 보세요.</p>
-        <div class="prompt">
-          <div class="prompt-top"><span class="prompt-label">고치는 말 · 계좌번호</span><button class="copy" type="button">복사</button></div>
+    <h4>고치기 ⑤ 총무 계좌번호 넣기</h4>
+    <div class="step-body">
+      <div class="prompt">
+        <div class="prompt-top"><span class="prompt-label">고치는 말 · 계좌번호</span><button class="copy" type="button">복사</button></div>
 <pre>맨 위에 총무 계좌번호를 입력하는 칸을 따로 만들어 줘.
 단톡방용 문장에서 '인원별 부담액' 부분은 빼고, 그 자리에 '총무 계좌: ○○'가 들어가게 해 줘.
 계좌번호를 안 넣으면 그 자리는 비워 둬.</pre>
-        </div>
-        <p><b>검산:</b> 계좌번호를 넣고 복사한 문장에 계좌가 보이는지, 비우고 복사하면 <b>"총무 계좌: "</b>만 남는지 확인하세요.</p>
-        <p class="note">연습할 때는 진짜 계좌번호 대신 "국민 123-456 민수" 같은 가짜 번호를 쓰세요.</p>
-      </div></li>
-    </ol>
-
-    <h3>완성 확인</h3>
-    <ul class="check" data-check="fix">
-      <li><label><input type="checkbox" id="f-1"><span>영수증 6장을 넣으면 총액 335,300원, 1인당 83,825원이 나오나요?</span></label></li>
-      <li><label><input type="checkbox" id="f-2"><span>총무가 모두 냈을 때 송금이 3번(83,825원씩)으로 나오나요?</span></label></li>
-      <li><label><input type="checkbox" id="f-3"><span>한 항목을 일부 사람끼리만 나누면 그 사람들 몫만 바뀌나요?</span></label></li>
-      <li><label><input type="checkbox" id="f-4"><span>복사한 문장을 메모장에 붙여 넣으면 총액, 내역, 계좌, 송금 안내가 보이나요?</span></label></li>
-      <li><label><input type="checkbox" id="f-5"><span>복제해 두었고, 말로 한 번 되돌려 봤나요?</span></label></li>
-    </ul>
-    <p class="check-count" data-count="fix"></p>
-  </div>
-</section>
-
-<!-- ============================== 4 모아 두기 ============================== -->
-<section class="block" id="save">
-  <div class="wrap">
-    <div class="block-head">
-      <p class="eyebrow">4단계 · 약 5분</p>
-      <h2>부탁 문장 모아 두기</h2>
-      <p class="summary">지금까지 고친 내용을 한 문장으로 모으면 다음에 한 번에 만들 수 있습니다. 2일차에는 이 계산기를 내 주소로 올립니다.</p>
+      </div>
+      <p><b>검산:</b> 계좌번호를 넣고 복사한 문장에 계좌가 보이는지, 비우고 복사하면 <b>"총무 계좌: "</b>만 남는지 확인하세요. 연습할 때는 진짜 계좌번호 대신 "국민 123-456 민수" 같은 가짜 번호를 쓰세요.</p>
     </div>
+
+    <h3>4. 부탁 문장 모아 두기</h3>
+    <p class="note" style="margin-bottom:1rem">지금까지 고친 내용을 한 문장으로 모으면 다음에 한 번에 만들 수 있습니다. 메모장에 저장해 두세요.</p>
     <div class="prompt">
       <div class="prompt-top"><span class="prompt-label">처음부터 한 번에 만드는 부탁 문장</span><button class="copy" type="button">복사</button></div>
 <pre>모임 정산 계산기를 만들어 줘.
@@ -431,7 +413,17 @@ footer { padding-block:2.5rem 3.5rem; color:var(--muted); font-size:.9rem; }
 - 휴대폰에서도 보기 좋게 큰 글씨와 큰 버튼
 만들기 전에 화면이 어떻게 생길지 먼저 설명해 줘.</pre>
     </div>
-    <p class="note" style="margin-top:.8rem">이 문장을 메모장에 저장해 두세요. 한 번에 여러 가지를 부탁하면 결과가 달라질 수 있으니, 안 되는 부분은 3단계처럼 하나씩 고치는 것이 안전합니다.</p>
+    <p class="note" style="margin-top:.6rem">한 번에 여러 가지를 부탁하면 결과가 달라질 수 있으니, 안 되는 부분은 위처럼 하나씩 고치는 것이 안전합니다.</p>
+
+    <h3>완성 확인</h3>
+    <ul class="check" data-check="l1">
+      <li><label><input type="checkbox" id="l1-1"><span>영수증 6장을 넣으면 총액 335,300원, 1인당 83,825원이 나오나요?</span></label></li>
+      <li><label><input type="checkbox" id="l1-2"><span>총무가 모두 냈을 때 송금이 3번(83,825원씩)으로 나오나요?</span></label></li>
+      <li><label><input type="checkbox" id="l1-3"><span>한 항목을 일부 사람끼리만 나누면 그 사람들 몫만 바뀌나요?</span></label></li>
+      <li><label><input type="checkbox" id="l1-4"><span>복사한 문장을 메모장에 붙여 넣으면 총액, 내역, 계좌, 송금 안내가 보이나요?</span></label></li>
+      <li><label><input type="checkbox" id="l1-5"><span>복제해 두었고, 말로 한 번 되돌려 봤나요?</span></label></li>
+    </ul>
+    <p class="check-count" data-count="l1"></p>
 
     <h3>돈 이야기에서 지킬 것</h3>
     <div class="dodont">
@@ -446,16 +438,8 @@ footer { padding-block:2.5rem 3.5rem; color:var(--muted); font-size:.9rem; }
         <li>정산 문장은 모임 단톡방에만 붙여 넣기</li>
       </ul></div>
     </div>
-  </div>
-</section>
 
-<!-- ============================== 막힐 때 ============================== -->
-<section class="block" id="help">
-  <div class="wrap">
-    <div class="block-head">
-      <p class="eyebrow">막힐 때</p>
-      <h2>자주 막히는 곳</h2>
-    </div>
+    <h3>막힐 때</h3>
     <div class="faq">
       <details><summary>채팅창 옆에 계산기가 안 떠요</summary><p>설정 → 기능에서 아티팩트와 파일 생성 관련 항목이 켜져 있는지 확인하고, "계산기를 아티팩트로 다시 만들어 줘"라고 부탁해 보세요.</p></details>
       <details><summary>계산이 틀려요</summary><p>2단계처럼 금액을 하나씩 영수증과 대조해 보세요. 그래도 틀리면 "총액이 335,300원이어야 하는데 ○○원으로 나와. 계산을 다시 점검해 줘"처럼 <b>맞는 숫자와 틀린 숫자</b>를 함께 말해 주세요.</p></details>
@@ -465,13 +449,340 @@ footer { padding-block:2.5rem 3.5rem; color:var(--muted); font-size:.9rem; }
     </div>
   </div>
 </section>
+
+<!-- ============================== 2교시 ============================== -->
+<section class="block" id="lesson2">
+  <div class="wrap">
+    <div class="block-head">
+      <p class="eyebrow">2교시 · 50분 · 데스크톱 앱 Code 탭</p>
+      <h2>사진 폴더로 가족 앨범 만들기</h2>
+      <p class="summary">내 컴퓨터의 사진 폴더 하나를 Claude에게 맡겨서, 날짜별로 묶이고 누르면 크게 보이는 앨범 웹페이지(index.html)를 만듭니다. 완성된 앨범 파일은 내 컴퓨터에서만 열립니다. 다만 Claude가 문구를 쓰려고 사진 내용을 볼 수 있으니, 맡겨도 되는 사진만 고르세요.</p>
+    </div>
+
+    <div class="pair">
+      <figure class="shot">
+        <img src="img/album-phone.jpg" alt="완성된 가족 앨범을 휴대폰 너비로 본 화면. 사진 위에 제목, 아래에 장소와 문구와 시각이 있다" width="390" height="1000" loading="lazy" style="max-height:30rem;width:auto">
+        <figcaption>완성된 앨범입니다. 사진마다 장소와 문구, 시각이 붙습니다. <a href="examples/album/index.html" target="_blank" rel="noopener">완성 예시 열어 보기</a></figcaption>
+      </figure>
+      <figure class="shot">
+        <img src="img/album-lightbox.jpg" alt="사진을 눌렀을 때 화면 가득 크게 보이는 모습. 아래에 장소, 문구, 시각이 있고 좌우에 넘김 버튼이 있다" width="390" height="800" loading="lazy" style="max-height:30rem;width:auto">
+        <figcaption>사진을 누르면 크게 열리고, 옆으로 밀면 다음 사진으로 넘어갑니다.</figcaption>
+      </figure>
+    </div>
+
+    <h3>1교시와 달라진 점</h3>
+    <p>1교시의 채팅창은 말로 앱을 만들어 옆 창에 띄웠습니다. 2교시의 <b>Code 탭</b>은 Claude가 <b>내 컴퓨터의 폴더 안</b>에서 파일을 직접 만듭니다. 그래서 사진 같은 내 파일을 다룰 수 있지만, 그만큼 <b>어떤 폴더를 맡기는지</b>와 <b>권한 창</b>을 내가 읽고 판단해야 합니다.</p>
+
+    <h3>준비물</h3>
+    <ul class="kit">
+      <li><span>실습 사진 15장(위에서 내려받기) 또는 내 여행 사진 복사본 30장 안팎</span></li>
+      <li><span>Claude 데스크톱 앱과 유료 계정</span></li>
+      <li><span>사진을 담을 새 폴더 하나 (예: 바탕화면의 <b>album</b>)</span></li>
+    </ul>
+
+    <h3>따라 하기</h3>
+    <ol class="steps">
+      <li><div class="step-body">
+        <p>사진을 새 폴더에 <b>복사</b>해 주세요.</p>
+        <p>압축을 푼 사진 15장을 바탕화면에 새로 만든 <b>album</b> 폴더에 복사합니다. 원본이 든 폴더를 통째로 맡기지 않고, 이번 작업용 폴더 하나만 맡기는 것이 안전합니다.</p>
+        <div class="downloads"><a class="dl main" href="files/practice-photos.zip" download="실습사진-경주월드.zip"><b>실습 사진 15장 받기</b><span>압축 파일 · 3.7MB</span></a></div>
+      </div></li>
+      <li><div class="step-body">
+        <p>데스크톱 앱에서 Code 탭을 열고, album 폴더를 골라 주세요.</p>
+        <p>입력창 아래에서 <b>Local</b>을 고르고 폴더 열기(<b>Open folder…</b>)로 album 폴더를 고릅니다. 권한 모드는 <b>Manual</b>로 해 주세요. 파일을 바꾸기 전에 Claude가 매번 물어봅니다.</p>
+        <p class="note">메뉴 이름은 앱 업데이트에 따라 조금 다를 수 있습니다. 안 보이면 아래 '막힐 때'를 확인하세요.</p>
+      </div></li>
+      <li><div class="step-body">
+        <p>아래 부탁 문장을 붙여 넣어 주세요.</p>
+        <div class="prompt">
+          <div class="prompt-top"><span class="prompt-label">부탁 문장 · 가족 앨범</span><button class="copy" type="button">복사</button></div>
+<pre>폴더에 있는 사진으로 가족 앨범 웹페이지 index.html을 만들어 줘.
+- 사진 파일은 옮기거나 이름을 바꾸거나 지우지 말 것
+- 찍은 날짜별로 묶고, 날짜마다 제목
+- 휴대폰과 컴퓨터 둘 다 보기 좋게
+- 인터넷 없이 더블클릭으로 열리게
+만들기 전에 계획부터 보여 줘.</pre>
+        </div>
+        <p class="note">'지우지 말 것'을 꼭 넣으세요. "필요 없는 건 지워 줘"처럼 지우기를 맡기는 부탁은 하지 않습니다.</p>
+      </div></li>
+      <li><div class="step-body">
+        <p>Claude가 보여 주는 계획을 읽어 주세요.</p>
+        <div class="ask">
+          <p class="who">계획에서 이런 것을 찾아보세요</p>
+          <ul>
+            <li>사진을 옮기거나 지우거나 이름을 바꾸지 않고 <b>복사본이나 그대로</b> 쓴다고 적혀 있는지</li>
+            <li>찍은 날짜를 어디서 읽는지 (파일 이름, 사진에 기록된 촬영 날짜)</li>
+            <li>인터넷에서 글꼴이나 라이브러리를 가져오지 않는지 (더블클릭으로 열려야 합니다)</li>
+          </ul>
+        </div>
+        <p class="note">실습 사진 15장은 모두 10월 3일 하루에 찍은 것이라, 날짜로 묶으면 묶음이 하나만 나옵니다. 계획에서 Claude가 이 점을 짚어 줄 수 있습니다.</p>
+      </div></li>
+      <li><div class="step-body">
+        <p>계획이 괜찮으면 허락해 주세요. 권한 창이 뜨면 읽고 판단하세요.</p>
+        <div class="prompt">
+          <div class="prompt-top"><span class="prompt-label">부탁 문장 · 허락하기</span><button class="copy" type="button">복사</button></div>
+<pre>좋아, 그대로 진행해</pre>
+        </div>
+        <p class="note">권한 창에 사진을 삭제하거나 옮기는 내용이 보이면 <b>거절</b>하고 "사진은 건드리지 말고 index.html만 만들어 줘"라고 다시 말하세요.</p>
+      </div></li>
+      <li><div class="step-body">
+        <p>폴더의 <b>index.html</b>을 더블클릭해서 열어 보세요.</p>
+        <p>브라우저에서 날짜 제목 아래에 사진이 시간순으로 펼쳐지면 성공입니다. 앨범은 사진 파일을 같은 폴더에서 불러오므로, 휴대폰으로 보려면 <b>album 폴더 전체</b>를 옮겨야 합니다.</p>
+      </div></li>
+    </ol>
+
+    <h3>마음에 안 들면 말로 고쳐요</h3>
+    <ol class="steps">
+      <li><div class="step-body">
+        <p>사진과 시간만 있어 허전하고, 크게 보고 싶다면</p>
+        <div class="prompt">
+          <div class="prompt-top"><span class="prompt-label">고치는 말 · 문구, 크게 보기, 대표 사진</span><button class="copy" type="button">복사</button></div>
+<pre>사진과 시간만 있으니 너무 허전해. 장소나 문구 같은 것도 추가하고, 사진을 누르면 크게 나오게 해.
+같은 사진만 연달아 있으면 대표 사진만 뽑아서 해.</pre>
+        </div>
+        <p>실습 사진에서는 이렇게 바뀌었습니다. 사진마다 "정문 앞 — 경주월드 도착! 정문 앞에서 다 같이 한 장" 같은 장소와 문구가 붙었습니다. 사진을 누르면 화면 가득 열리고, 몇 초 간격으로 찍은 비슷한 사진 세 쌍은 눈을 감았거나 흔들린 사진을 빼고 한 장씩만 남아 <b>15장 중 12장</b>이 보였습니다. 빠진 사진은 지워지지 않고 폴더에 그대로 있습니다.</p>
+        <p class="note">실습에서 나온 결과 예시이고, 사람마다 문구와 고르는 사진이 조금 다릅니다. 놀이기구의 실제 이름처럼 사진만으로 알 수 없는 것은 일반적인 이름으로 적힐 수 있으니, 틀린 이름은 아래처럼 바꾸세요.</p>
+      </div></li>
+      <li><div class="step-body">
+        <p>설명 하나만 바꾸고 싶다면</p>
+        <div class="prompt">
+          <div class="prompt-top"><span class="prompt-label">고치는 말 · 바꿔 쓰기</span><button class="copy" type="button">복사</button></div>
+<pre>회전목마 사진 설명을 '회전목마 타고 손 흔드는 우리 딸'로 바꿔 줘</pre>
+        </div>
+        <p class="note">고친 뒤에는 브라우저에서 <b>새로고침(F5)</b>을 눌러야 바뀐 모습이 보입니다. 마음에 안 들면 "방금 고친 것을 취소하고 이전 상태로 되돌려 줘"라고 말하세요.</p>
+      </div></li>
+    </ol>
+
+    <h3>사진 순서는 이렇게 알아요</h3>
+    <p>Claude가 날짜별로 묶을 때는 세 가지를 단서로 씁니다. <b>파일 이름</b>(예: IMG_20261003_100512는 2026년 10월 3일 10시 05분 12초), 사진 안에 기록된 <b>촬영 날짜</b>, 그리고 <b>사진 내용</b>입니다. 카카오톡으로 받은 사진은 촬영 날짜가 지워져 있을 때가 많아서 순서가 엉킬 수 있습니다.</p>
+
+    <h3>완성 확인</h3>
+    <ul class="check" data-check="l2">
+      <li><label><input type="checkbox" id="l2-1"><span>album 폴더의 사진이 처음과 같은 15장이고, 이름이 바뀌지 않았나요?</span></label></li>
+      <li><label><input type="checkbox" id="l2-2"><span>index.html을 더블클릭하면 인터넷 없이 앨범이 열리나요?</span></label></li>
+      <li><label><input type="checkbox" id="l2-3"><span>사진을 누르면 크게 보이고, 다음 사진으로 넘어가나요?</span></label></li>
+      <li><label><input type="checkbox" id="l2-4"><span>권한 창을 읽고 허락하거나 거절해 봤나요?</span></label></li>
+    </ul>
+    <p class="check-count" data-count="l2"></p>
+
+    <h3>가족 사진을 다룰 때</h3>
+    <div class="dodont">
+      <div class="dont"><h4>하지 말 것</h4><ul>
+        <li>사진이 잔뜩 든 상위 폴더를 통째로 맡기기</li>
+        <li>"필요 없는 건 지워 줘"라고 부탁하기</li>
+        <li>가족 얼굴이 담긴 앨범을 아무에게나 보내기</li>
+      </ul></div>
+      <div class="do"><h4>이렇게</h4><ul>
+        <li>복사본 폴더 하나만 맡기기</li>
+        <li>지우기 대신 "비슷한 사진은 대표만 보이게" 하고 파일은 그대로 두기</li>
+        <li>앨범은 내 컴퓨터에서만 열고, 공유는 보낼 사람을 정하고</li>
+      </ul></div>
+    </div>
+
+    <h3>막힐 때</h3>
+    <div class="faq">
+      <details><summary>Code 탭이 안 보여요</summary><p>유료 계정으로 로그인했는지, 웹이 아니라 <b>데스크톱 앱</b>인지 확인해 주세요. 앱을 최신으로 업데이트하면 보일 수 있습니다.</p></details>
+      <details><summary>앨범이 열리는데 사진이 안 보여요</summary><p>index.html과 사진 파일이 <b>같은 폴더</b>에 있어야 합니다. index.html만 다른 곳으로 옮기지 마세요.</p></details>
+      <details><summary>순서가 이상해요</summary><p>"날짜를 모르는 사진은 맨 뒤로"를 넣어 다시 부탁해 보세요. 카카오톡으로 받은 사진은 촬영 날짜가 지워져 있을 수 있습니다. 아이폰 HEIC 사진은 Claude가 직접 못 보니 JPG로 준비하세요.</p></details>
+      <details><summary>고쳤는데 화면이 그대로예요</summary><p>브라우저에서 새로고침(F5)을 눌러 보세요. 파일을 고친 뒤에도 열려 있던 화면은 저절로 바뀌지 않습니다.</p></details>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== 3교시 ============================== -->
+<section class="block" id="lesson3">
+  <div class="wrap">
+    <div class="block-head">
+      <p class="eyebrow">3교시 · 50분 · 데스크톱 앱 Code 탭</p>
+      <h2>기록이 남는 가계부 만들기</h2>
+      <p class="summary">날짜·분류·금액·메모를 큰 버튼으로 넣으면 이번 달 합계와 분류별 막대그래프가 보이는 가계부입니다. 기록은 파일이 아니라 <b>이 브라우저 안에</b> 저장되어 창을 닫아도 남습니다.</p>
+    </div>
+
+    <div class="hero-grid">
+      <figure class="shot">
+        <img src="img/gagyebu-phone.jpg" alt="완성된 가계부를 휴대폰 너비로 본 화면. 위에 월 선택 상자, 이번 달 합계, 분류별 막대그래프, 그 아래에 입력 칸과 기록 목록이 있다" width="390" height="2000" loading="lazy" style="max-height:34rem;width:auto">
+        <figcaption>완성된 가계부입니다. 영수증 5장을 넣은 모습이고, 합계는 161,210원입니다. <a href="examples/gagyebu.html" target="_blank" rel="noopener">완성 예시 눌러 보기</a></figcaption>
+      </figure>
+      <div>
+        <p style="font-weight:600">이 가계부로 할 수 있는 것</p>
+        <ul>
+          <li>큰 버튼으로 기록하고, 이번 달 합계와 분류별 비율을 막대로 봅니다.</li>
+          <li>위쪽 드롭다운으로 지난달 기록을 조회합니다.</li>
+          <li>분류를 추가하거나 지웁니다.</li>
+          <li>영수증 사진을 올리면 금액·날짜 등이 채워집니다.</li>
+          <li>엑셀에서 열 수 있는 CSV로 내보냅니다.</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>준비물</h3>
+    <ul class="kit">
+      <li><span>2교시와 같은 데스크톱 앱 Code 탭</span></li>
+      <li><span>새 폴더 하나 (예: 바탕화면의 <b>gagyebu</b>)</span></li>
+      <li><span>실습 영수증 5장(위에서 내려받기) 또는 지난주에 쓴 돈 5건 메모</span></li>
+      <li><span>엑셀 또는 구글 시트 (CSV를 열어 볼 때)</span></li>
+    </ul>
+
+    <h3>따라 하기</h3>
+    <ol class="steps">
+      <li><div class="step-body">
+        <p>Code 탭에서 <b>gagyebu</b> 폴더를 골라 주세요.</p>
+        <p>2교시와 같은 방법입니다. 입력창 아래에서 Local을 고르고 폴더 열기로 새 폴더를 고릅니다. 권한 모드는 Manual입니다.</p>
+      </div></li>
+      <li><div class="step-body">
+        <p>아래 부탁 문장을 붙여 넣어 주세요.</p>
+        <div class="prompt">
+          <div class="prompt-top"><span class="prompt-label">부탁 문장 · 가계부</span><button class="copy" type="button">복사</button></div>
+<pre>이 폴더에 휴대폰용 가계부 index.html 한 파일을 만들어 줘.
+- 날짜(오늘이 기본), 분류, 금액, 메모를 큰 버튼으로 입력
+- 분류: 식비, 장보기, 교통, 생활, 아이, 기타
+- 이번 달 합계와 분류별 막대그래프
+- 기록은 파일에 넣지 말고 이 브라우저에만 저장
+- 인터넷 없이 더블클릭으로 열리게
+만들기 전에 계획부터 보여 줘.</pre>
+        </div>
+        <p class="note">'기록은 파일에 넣지 말고 이 브라우저에만 저장'이 핵심입니다. 그래야 나중에 앱을 인터넷에 올려도 내 기록이 함께 올라가지 않습니다.</p>
+      </div></li>
+      <li><div class="step-body">
+        <p>계획을 읽고 허락해 주세요.</p>
+        <div class="ask">
+          <p class="who">계획에서 이런 것을 찾아보세요</p>
+          <ul>
+            <li>'브라우저에 저장'한다는 말이 있는지 (파일 안에 숫자를 적는다고 되어 있으면 고쳐 달라고 하세요)</li>
+            <li>파일이 index.html 하나뿐인지</li>
+            <li>외부 인터넷 자료를 가져오지 않는지</li>
+          </ul>
+        </div>
+        <div class="prompt">
+          <div class="prompt-top"><span class="prompt-label">부탁 문장 · 허락하기</span><button class="copy" type="button">복사</button></div>
+<pre>좋아, 그대로 진행해</pre>
+        </div>
+      </div></li>
+      <li><div class="step-body">
+        <p>index.html을 열어 영수증 5장의 금액을 넣어 보세요.</p>
+        <p>영수증마다 합계를 가리키는 글자가 <b>합계, 받을금액, 결제금액, 청구금액, 총결제</b>로 다릅니다. 가게 이름은 메모에 적고, 분류를 골라 저장하세요.</p>
+        <details class="faq"><summary>다 넣은 뒤에 정답을 확인하세요</summary>
+          <table class="t" style="margin-top:.6rem">
+            <thead><tr><th>가게</th><th>날짜</th><th>분류</th><th class="n">금액</th></tr></thead>
+            <tbody>
+              <tr><td>한솥골 한정식</td><td>10-03</td><td>식비</td><td class="n">33,000</td></tr>
+              <tr><td>푸른들 마트 행복점</td><td>10-11</td><td>장보기</td><td class="n">23,910</td></tr>
+              <tr><td>한빛주유소</td><td>10-15</td><td>교통</td><td class="n">52,000</td></tr>
+              <tr><td>별빛문구 어린이 완구</td><td>10-20</td><td>아이</td><td class="n">21,800</td></tr>
+              <tr><td>온누리 건강약국</td><td>10-26</td><td>생활</td><td class="n">30,500</td></tr>
+              <tr><td colspan="3">합계</td><td class="n">161,210</td></tr>
+            </tbody>
+          </table>
+          <p class="note">영수증 날짜가 10월이라 10월이 아닌 달에 연습하면 '이번 달' 합계에 안 들어갑니다. 그때는 위쪽 드롭다운에서 해당 달을 고르세요.</p>
+        </details>
+      </div></li>
+      <li><div class="step-body">
+        <p>새로고침(F5)하고, 창을 닫았다가 다시 열어 보세요.</p>
+        <p>넣은 기록이 그대로 있으면 성공입니다. 기록이 어디에 있는지 아래 표로 정리해 둡니다.</p>
+        <table class="t">
+          <thead><tr><th></th><th>index.html 파일 안</th><th>이 브라우저 안</th></tr></thead>
+          <tbody>
+            <tr><td>내 기록</td><td>없음</td><td>있음</td></tr>
+            <tr><td>다른 브라우저로 열면</td><td>같은 앱</td><td>기록이 비어 있음</td></tr>
+            <tr><td>사이트 데이터를 지우면</td><td>그대로</td><td>기록이 사라짐</td></tr>
+          </tbody>
+        </table>
+        <p class="note">그래서 중요한 기록은 아래의 CSV로 백업해 두세요.</p>
+      </div></li>
+      <li><div class="step-body">
+        <p>파일에 내 숫자가 없는지 확인해 보세요.</p>
+        <p>index.html을 메모장으로 열고 <b>Ctrl+F</b>로 방금 넣은 금액(예: 23910)을 찾아보세요. <b>찾을 수 없으면 통과</b>입니다. 기록이 파일 밖, 브라우저에만 있다는 뜻입니다. 찾아지면 "기록을 파일에 넣지 말고 브라우저에만 저장하게 고쳐 줘"라고 부탁하세요.</p>
+      </div></li>
+    </ol>
+
+    <h3>마음에 안 들면 말로 고쳐요</h3>
+    <p class="note" style="margin-bottom:1rem">한 번에 하나씩 부탁하고, 고칠 때마다 기록이 그대로 남아 있는지 확인하세요. 실습에서는 아래 네 가지를 고쳤습니다.</p>
+
+    <h4>고치기 ① 영수증 사진으로 입력하기</h4>
+    <div class="step-body">
+      <div class="prompt">
+        <div class="prompt-top"><span class="prompt-label">고치는 말 · 영수증 첨부</span><button class="copy" type="button">복사</button></div>
+<pre>1교시 모임 정산 프로그램처럼 영수증 사진을 올리면 항목에 맞게 들어가게 해 줘.
+금액, 날짜, 가게 이름(메모), 분류를 가능한 만큼 채우고, 바로 저장하지 말고 내가 확인한 뒤 저장하게 해 줘.</pre>
+      </div>
+      <p>만들어 둔 완성 예시로 가계부 영수증 5장을 읽혀 본 결과, <b>금액·날짜·분류는 5장 모두 맞았고</b> 가게 이름은 두 장이 엉뚱한 글자로 읽혔습니다. 가게 이름은 보이는 대로 고치세요.</p>
+      <p class="note">이 기능만 영수증을 읽는 도구를 인터넷에서 처음 한 번 내려받아야 해서 인터넷이 필요합니다. 나머지는 인터넷 없이 됩니다. 사진은 밖으로 보내지 않고 이 기기 안에서만 처리합니다.</p>
+    </div>
+
+    <h4>고치기 ② 분류 추가·삭제</h4>
+    <div class="step-body">
+      <div class="prompt">
+        <div class="prompt-top"><span class="prompt-label">고치는 말 · 분류 관리</span><button class="copy" type="button">복사</button></div>
+<pre>분류를 내가 직접 추가하거나 지울 수 있게 해 줘.
+이미 쓴 분류를 지워도 그 기록은 지워지지 않고 그래프에 남게 해 줘.</pre>
+      </div>
+      <p><b>검산:</b> '취미' 분류를 추가해서 기록 한 건을 넣고, 그 분류를 지워 보세요. 기록은 남고 그래프에 "삭제한 분류"로 표시되어 합계가 그대로여야 합니다.</p>
+    </div>
+
+    <h4>고치기 ③ CSV 내보내기</h4>
+    <div class="step-body">
+      <div class="prompt">
+        <div class="prompt-top"><span class="prompt-label">고치는 말 · CSV</span><button class="copy" type="button">복사</button></div>
+<pre>기록을 CSV 파일로 내보내는 버튼을 만들어 줘.
+지금 보는 달만 내보내는 버튼과 전체를 내보내는 버튼 두 개. 열은 날짜, 분류, 금액, 메모이고, 엑셀에서 한글이 깨지지 않게 해 줘.</pre>
+      </div>
+      <p><b>검산:</b> 내려받은 CSV를 엑셀로 열어 줄 수와 금액이 앱의 기록과 같은지 보세요.</p>
+    </div>
+
+    <h4>고치기 ④ 월별로 보기</h4>
+    <div class="step-body">
+      <div class="prompt">
+        <div class="prompt-top"><span class="prompt-label">고치는 말 · 월 드롭다운</span><button class="copy" type="button">복사</button></div>
+<pre>화면 맨 위에 월을 고르는 드롭다운을 만들어 줘.
+고른 달의 합계, 분류별 막대그래프, 기록 목록이 바뀌게 하고, 기본은 이번 달이야.</pre>
+      </div>
+      <p><b>검산:</b> 지난달 날짜로 기록 한 건을 넣으면 드롭다운에 그 달이 생기고, 그 달을 고르면 합계가 그 한 건만큼 나와야 합니다.</p>
+    </div>
+
+    <h3>완성 확인</h3>
+    <ul class="check" data-check="l3">
+      <li><label><input type="checkbox" id="l3-1"><span>영수증 5장을 넣으면 합계 161,210원, 분류별 막대가 나오나요?</span></label></li>
+      <li><label><input type="checkbox" id="l3-2"><span>새로고침하고 창을 닫았다 열어도 기록이 남아 있나요?</span></label></li>
+      <li><label><input type="checkbox" id="l3-3"><span>index.html에서 Ctrl+F로 내가 넣은 금액을 찾을 수 없나요?</span></label></li>
+      <li><label><input type="checkbox" id="l3-4"><span>분류를 추가하고 지워도 기록 합계가 그대로인가요?</span></label></li>
+      <li><label><input type="checkbox" id="l3-5"><span>CSV를 엑셀로 열어 한글이 깨지지 않고 기록 수가 같은가요?</span></label></li>
+      <li><label><input type="checkbox" id="l3-6"><span>월 드롭다운으로 지난달 기록을 볼 수 있나요?</span></label></li>
+    </ul>
+    <p class="check-count" data-count="l3"></p>
+
+    <h3>돈 기록을 다룰 때</h3>
+    <div class="dodont">
+      <div class="dont"><h4>하지 말 것</h4><ul>
+        <li>내 실제 금액을 index.html 파일 안에 적어 두기</li>
+        <li>가계부 파일과 CSV를 아무에게나 보내기</li>
+        <li>CSV 백업 없이 사이트 데이터 지우기</li>
+      </ul></div>
+      <div class="do"><h4>이렇게</h4><ul>
+        <li>기록은 브라우저에만 저장하고, 파일에는 숫자를 넣지 않기</li>
+        <li>한 달에 한 번 CSV로 백업하기</li>
+        <li>영수증 사진에서 카드번호는 가리고 올리기</li>
+      </ul></div>
+    </div>
+
+    <h3>막힐 때</h3>
+    <div class="faq">
+      <details><summary>기록이 사라졌어요</summary><p>다른 브라우저로 열었거나, 파일을 다른 곳으로 옮겼거나, 사이트 데이터를 지웠을 수 있습니다. 비공개 창에서는 저장이 안 되고, 화면 위에 경고가 뜹니다. 평소 쓰는 브라우저의 일반 창에서 열어 주세요.</p></details>
+      <details><summary>CSV 한글이 깨져요</summary><p>"CSV 앞에 BOM을 붙여서 엑셀에서 한글이 깨지지 않게 해 줘"라고 부탁하세요. 깨진 화면을 캡처해서 보여 주면 더 정확히 고칩니다.</p></details>
+      <details><summary>그래프가 안 나와요</summary><p>기록이 이번 달 날짜가 아니면 합계가 0원으로 나옵니다. 위쪽 월 드롭다운에서 기록이 있는 달을 골라 보세요.</p></details>
+      <details><summary>영수증을 올려도 아무것도 안 채워져요</summary><p>영수증 읽기는 인터넷이 연결되어 있어야 하고, 처음에는 1분쯤 걸립니다. 계속 안 되면 금액을 직접 입력하세요. 흐리거나 구겨진 영수증은 금액을 못 읽을 수 있습니다.</p></details>
+    </div>
+  </div>
+</section>
 </main>
 
 <footer>
   <div class="wrap">
-    <p><b>오늘 가져가는 것</b>: 말로 만든 정산 계산기, 검산한 숫자(335,300원 · 83,825원), 메모장에 저장한 부탁 문장.</p>
-    <p style="margin-top:1rem">화면과 메뉴 이름은 Claude 업데이트에 따라 조금 다를 수 있습니다. 실습 영수증은 이 강의의 연습용 가상 자료입니다.</p>
-    <p style="margin-top:1rem"><a href="examples/settle.html" target="_blank" rel="noopener">완성 예시 계산기 열어 보기</a></p>
+    <p><b>오늘 가져가는 것</b>: 채팅창의 정산 계산기, 사진 폴더 → 가족 앨범 index.html, 기록이 남는 가계부 index.html. 세 가지 모두 '기준 말하기 → 계획 확인 → 결과 확인 → 말로 고치기'로 만들었습니다.</p>
+    <p style="margin-top:1rem"><b>다음 시간</b>: 2일차에는 만든 정산 계산기와 가계부를 누구나 열 수 있는 인터넷 주소로 올리고, 휴대폰 홈 화면에 놓습니다.</p>
+    <p style="margin-top:1rem">화면과 메뉴 이름은 Claude 업데이트에 따라 조금 다를 수 있습니다. 실습 영수증과 사진은 이 강의의 연습용 가상 자료입니다.</p>
+    <ul style="margin-top:1rem">
+      <li><a href="examples/settle.html" target="_blank" rel="noopener">정산 계산기 완성 예시</a> · <a href="examples/album/index.html" target="_blank" rel="noopener">가족 앨범 완성 예시</a> · <a href="examples/gagyebu.html" target="_blank" rel="noopener">가계부 완성 예시</a></li>
+    </ul>
   </div>
 </footer>
 
@@ -499,7 +810,7 @@ footer { padding-block:2.5rem 3.5rem; color:var(--muted); font-size:.9rem; }
   function load(key) { try { return JSON.parse(localStorage.getItem(key) || "{}"); } catch (e) { return {}; } }
   function save(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {} }
   document.querySelectorAll("[data-check]").forEach(function (list) {
-    var key = "settle-guide-" + list.dataset.check, state = load(key);
+    var key = "education1-" + list.dataset.check, state = load(key);
     var boxes = list.querySelectorAll("input[type=checkbox]");
     var count = document.querySelector('[data-count="' + list.dataset.check + '"]');
     function update() {
